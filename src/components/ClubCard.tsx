@@ -52,6 +52,10 @@ export default function ClubCard({ club, onJoin }: ClubCardProps) {
                         >
                             Kulübe Git →
                         </Link>
+                    ) : club.is_pending ? (
+                        <span className="text-sm font-medium bg-yellow-50 text-yellow-700 px-4 py-1.5 rounded-lg border border-yellow-200">
+                            Başvuruda Bekliyor
+                        </span>
                     ) : (
                         <button
                             onClick={() => onJoin?.(club.id)}
