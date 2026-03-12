@@ -45,13 +45,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
         );
 
         // Return full comment with author info for real-time display
+        const u: any = user;
         const comment = {
             ...result.rows[0],
-            author_name: user.name,
-            author_avatar: user.avatar_url,
-            author_avatar_preset: user.avatar_preset,
-            author_avatar_background: user.avatar_background,
-            author_avatar_variant: user.avatar_variant,
+            author_name: u.name,
+            author_avatar: u.avatar_url || u.image || null,
+            author_avatar_preset: u.avatar_preset || null,
+            author_avatar_background: u.avatar_background || null,
+            author_avatar_variant: u.avatar_variant ?? null,
         };
 
         return NextResponse.json({ success: true, data: comment });

@@ -1,11 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Building2,
     Calendar,
+    Briefcase,
     Check,
     CheckSquare,
     Clock,
@@ -76,10 +77,20 @@ export default function AdminPage() {
     const [processingBulk, setProcessingBulk] = useState(false);
 
     // Department management
-    const [deptList, setDeptList] = useState<{ name: string; user_count: number; admin_count: number; club_admin_count: number; member_count: number }[]>([]);
+    const [deptList, setDeptList] = useState<any[]>([]);
     const [loadingDepts, setLoadingDepts] = useState(false);
-    const [editDeptModal, setEditDeptModal] = useState<{ oldName: string; newName: string } | null>(null);
+    const [editDeptModal, setEditDeptModal] = useState<{ id?: string; oldName: string; newName: string } | null>(null);
     const [savingDept, setSavingDept] = useState(false);
+    const [deptReportModal, setDeptReportModal] = useState<{ name: string; users: any[] } | null>(null);
+    const [loadingDeptReport, setLoadingDeptReport] = useState(false);
+    const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
+    const deptFileRef = useRef<HTMLInputElement | null>(null);
+
+    // Titles
+    const [titleList, setTitleList] = useState<{ id: string; name: string; created_at: string }[]>([]);
+    const [loadingTitles, setLoadingTitles] = useState(false);
+    const [editTitleModal, setEditTitleModal] = useState<{ id: string; oldName: string; newName: string } | null>(null);
+    const [savingTitle, setSavingTitle] = useState(false);
 
     // Role management
     const [roleModal, setRoleModal] = useState<{ userId: string; userName: string; currentRole: string } | null>(null);
@@ -130,7 +141,10 @@ export default function AdminPage() {
         if (activeTab === 'posts') loadPosts();
         if (activeTab === 'events') loadEvents();
         if (activeTab === 'polls') loadPolls();
-        if (activeTab === 'departments') loadDepartments();
+        if (activeTab === 'departments') {
+            loadDepartments();
+            loadTitles();
+        }
     }, [activeTab, userDeptFilter, userRoleFilter, clubStatusFilter, status]);
 
     const loadStats = async () => {
@@ -217,13 +231,52 @@ export default function AdminPage() {
         setLoadingDepts(false);
     };
 
+    const toggleDeptSelection = (id: string) => {
+        setSelectedDeptIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleDeptCsvUpload = async (file: File | null) => {
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        // treat each line as a department name or CSV with first column as name
+        const names = lines.map(l => l.split(',')[0].replace(/^"|"$/g, '').trim()).filter(Boolean);
+        if (names.length === 0) return alert('Dosyada departman bulunamadı.');
+        const res = await fetch('/api/admin/departments/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names }) });
+        const data = await res.json();
+        alert(data.message || data.error);
+        await loadDepartments();
+    };
+
+    const handleDeptBulkDelete = async () => {
+        if (selectedDeptIds.length === 0) return;
+        const choice = prompt(`Seçili ${selectedDeptIds.length} departmanı silmek istiyorsunuz.\n1) Boşalt\n2) Yeniden ata (hedef departman adı girin)\n\nLütfen 1 veya hedef departman adını yazın:`);
+        if (choice === null) return;
+        const trimmed = String(choice).trim();
+        const body: any = { ids: selectedDeptIds };
+        if (trimmed === '1' || trimmed === '') body.clear_users = true; else body.reassign_to = trimmed;
+        const res = await fetch('/api/admin/departments/bulk-delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        alert(data.message || data.error);
+        setSelectedDeptIds([]);
+        await Promise.all([loadDepartments(), loadUsers()]);
+    };
+
+    const loadTitles = async () => {
+        setLoadingTitles(true);
+        const res = await fetch('/api/admin/titles');
+        const data = await res.json();
+        if (data.success) setTitleList(data.data);
+        setLoadingTitles(false);
+    };
+
     const handleRenameDept = async () => {
         if (!editDeptModal || !editDeptModal.newName.trim()) return;
         setSavingDept(true);
         const res = await fetch('/api/admin/departments', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ old_name: editDeptModal.oldName, new_name: editDeptModal.newName }),
+            body: JSON.stringify({ id: editDeptModal.id, new_name: editDeptModal.newName }),
         });
         const data = await res.json();
         setSavingDept(false);
@@ -235,18 +288,110 @@ export default function AdminPage() {
         }
     };
 
-    const handleDeleteDept = async (name: string) => {
-        if (!confirm(`"${name}" departmanını kaldırmak istediğinize emin misiniz? Tüm kullanıcıların departman bilgisi silinecek.`)) return;
+    const handleAddTitle = async (name: string) => {
+        if (!name.trim()) return;
+        setSavingTitle(true);
+        const res = await fetch('/api/admin/titles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        setSavingTitle(false);
+        if (data.success) await loadTitles(); else alert(data.error);
+    };
+
+    const handleRenameTitle = async () => {
+        if (!editTitleModal || !editTitleModal.newName.trim()) return;
+        setSavingTitle(true);
+        const res = await fetch('/api/admin/titles', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editTitleModal.id, new_name: editTitleModal.newName }),
+        });
+        const data = await res.json();
+        setSavingTitle(false);
+        if (data.success) {
+            setEditTitleModal(null);
+            await loadTitles();
+        } else alert(data.error);
+    };
+
+    const handleDeleteTitle = async (id: string, name: string) => {
+        if (!confirm(`"${name}" unvanını kaldırmak istediğinize emin misiniz? Bu unvanı kullananların unvanı silinecek.`)) return;
+        const res = await fetch('/api/admin/titles', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, clear_users: true }),
+        });
+        const data = await res.json();
+        alert(data.message || data.error);
+        if (data.success) await loadTitles();
+    };
+
+    const handleDeleteDept = async (id: string, name: string) => {
+        const choice = prompt(`"${name}" departmanını kaldırmak istiyorsunuz.\n
+1) Boşalt (kullanıcı departmanları temizlenecek)\n2) Yeniden ata (hedef departman adını girin)\n\nLütfen 1 veya hedef departman adını yazın (iptal için boş bırakın):`);
+        if (choice === null) return; // cancelled
+        const trimmed = String(choice).trim();
+        let body: any = { id };
+        if (trimmed === '1' || trimmed === '') {
+            if (!confirm(`"${name}" departmanını kaldırıp kullanıcı departmanlarını temizlemek istediğinize emin misiniz?`)) return;
+            body.clear_users = true;
+        } else {
+            // user provided a target department name
+            if (!confirm(`"${name}" departmanını kaldırıp kullanıcıları "${trimmed}" departmanına atamak istiyor musunuz?`)) return;
+            body.reassign_to = trimmed;
+        }
+
         const res = await fetch('/api/admin/departments', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name }),
+            body: JSON.stringify(body),
         });
         const data = await res.json();
         alert(data.message || data.error);
         if (data.success) {
             await Promise.all([loadDepartments(), loadUsers()]);
         }
+    };
+
+    const openDeptReport = async (deptName: string) => {
+        setDeptReportModal({ name: deptName, users: [] });
+        setLoadingDeptReport(true);
+        try {
+            const res = await fetch(`/api/admin/users?department=${encodeURIComponent(deptName)}`);
+            const data = await res.json();
+            if (data.success) {
+                setDeptReportModal({ name: deptName, users: data.data.users });
+            } else {
+                setDeptReportModal({ name: deptName, users: [] });
+                alert(data.error || 'Rapor yüklenemedi.');
+            }
+        } catch (e) {
+            setDeptReportModal({ name: deptName, users: [] });
+            alert('Rapor yüklenirken hata oluştu.');
+        }
+        setLoadingDeptReport(false);
+    };
+
+    const exportDeptReportCsv = (users: any[], deptName: string) => {
+        if (!users || users.length === 0) {
+            alert('Dışa aktarılacak kullanıcı bulunamadı.');
+            return;
+        }
+        const header = ['Ad', 'E-posta', 'Rol', 'Departman', 'Unvan', 'Kulüp Sayısı', 'Gönderi Sayısı', 'Kayıt Tarihi'];
+        const rows = users.map(u => [u.name || '', u.email || '', u.role || '', u.department || '', u.title || '', u.club_count ?? 0, u.post_count ?? 0, new Date(u.created_at).toLocaleString()]);
+        const csv = [header, ...rows].map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${deptName.replace(/[^a-z0-9_-]/gi, '_')}_users.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     };
 
     const handleChangeRole = async () => {
@@ -973,8 +1118,8 @@ export default function AdminPage() {
                                             <td className="px-4 py-3 text-sm text-gray-500">{formatDate(request.created_at)}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${request.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                        request.status === 'approved' ? 'bg-red-100 text-red-600' :
-                                                            'bg-gray-100 text-gray-600'
+                                                    request.status === 'approved' ? 'bg-red-100 text-red-600' :
+                                                        'bg-gray-100 text-gray-600'
                                                     }`}>
                                                     {request.status === 'pending' ? 'Beklemede' : request.status === 'approved' ? 'Onaylandı' : 'Reddedildi'}
                                                 </span>
@@ -1210,13 +1355,21 @@ export default function AdminPage() {
                                     {deptList.length}
                                 </span>
                             </div>
-                            <button
-                                onClick={loadDepartments}
-                                className="text-sm text-gray-500 hover:text-gray-700 transition"
-                            >
-                                Yenile
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <input ref={deptFileRef} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleDeptCsvUpload(e.target.files?.[0] ?? null)} />
+                                <button onClick={() => deptFileRef.current?.click()} className="text-sm text-gray-500 hover:text-gray-700 transition">CSV/Yükle</button>
+                                <button onClick={loadDepartments} className="text-sm text-gray-500 hover:text-gray-700 transition">Yenile</button>
+                            </div>
                         </div>
+                        {selectedDeptIds.length > 0 && (
+                            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                                <span className="text-sm text-blue-700">{selectedDeptIds.length} departman seçildi</span>
+                                <div className="flex gap-2">
+                                    <button onClick={handleDeptBulkDelete} className="px-3 py-1 bg-red-600 text-white rounded">Seçiliyi Sil / Yeniden Ata</button>
+                                    <button onClick={() => setSelectedDeptIds([])} className="px-3 py-1 bg-gray-100 text-gray-700 rounded">Seçimi Temizle</button>
+                                </div>
+                            </div>
+                        )}
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -1240,7 +1393,10 @@ export default function AdminPage() {
                                         </tr>
                                     ) : deptList.map((dept) => (
                                         <tr key={dept.name} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.name}</td>
+                                            <td className="px-4 py-3">
+                                                <input type="checkbox" checked={selectedDeptIds.includes(dept.id)} onChange={() => toggleDeptSelection(dept.id)} className="mr-2" />
+                                                <span className="text-sm font-medium text-gray-900">{dept.name}</span>
+                                            </td>
                                             <td className="px-4 py-3 text-sm text-center font-semibold text-gray-700">{dept.user_count}</td>
                                             <td className="px-4 py-3 text-center">
                                                 {Number(dept.admin_count) > 0 ? (
@@ -1266,13 +1422,19 @@ export default function AdminPage() {
                                                         <Users className="w-3 h-3" /> Kullanıcılar
                                                     </button>
                                                     <button
-                                                        onClick={() => setEditDeptModal({ oldName: dept.name, newName: dept.name })}
+                                                        onClick={() => openDeptReport(dept.name)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                                                    >
+                                                        <FileText className="w-3 h-3" /> Rapor
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditDeptModal({ id: dept.id, oldName: dept.name, newName: dept.name })}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition"
                                                     >
                                                         <Pencil className="w-3 h-3" /> Düzenle
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteDept(dept.name)}
+                                                        onClick={() => handleDeleteDept(dept.id, dept.name)}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition"
                                                     >
                                                         <Trash2 className="w-3 h-3" /> Kaldır
@@ -1288,6 +1450,54 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-400 px-1">
                         Departmanlar kullanıcıların profil bilgilerinden alınmaktadır. &quot;Kaldır&quot; işlemi departmanı silmez, bu departmandaki kullanıcıların departman alanını boşaltır.
                     </p>
+                    {/* Titles management */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <Briefcase className="w-5 h-5 text-emerald-600" />
+                                <h3 className="text-lg font-bold text-gray-900">Unvanlar</h3>
+                                <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">{titleList.length}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={loadTitles} className="text-sm text-gray-500 hover:text-gray-700">Yenile</button>
+                            </div>
+                        </div>
+
+                        <div className="mb-3 flex gap-2">
+                            <input id="newTitleInput" placeholder="Yeni unvan ekle" className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
+                            <button onClick={() => { const el = document.getElementById('newTitleInput') as HTMLInputElement | null; if (el?.value) { handleAddTitle(el.value); el.value = ''; } }} className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg">Ekle</button>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-100">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unvan</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Oluşturulma</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {loadingTitles ? (
+                                        <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Yükleniyor...</td></tr>
+                                    ) : titleList.length === 0 ? (
+                                        <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Unvan bulunamadı.</td></tr>
+                                    ) : titleList.map(t => (
+                                        <tr key={t.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-sm text-gray-900">{t.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(t.created_at).toLocaleString()}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => setEditTitleModal({ id: t.id, oldName: t.name, newName: t.name })} className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-lg">Düzenle</button>
+                                                    <button onClick={() => handleDeleteTitle(t.id, t.name)} className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-50 text-red-600 rounded-lg">Sil</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -1325,6 +1535,49 @@ export default function AdminPage() {
                 </div>
             )}
 
+            {deptReportModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => setDeptReportModal(null)} />
+                    <div className="relative bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold">{deptReportModal.name} - Kullanıcı Raporu</h3>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => exportDeptReportCsv(deptReportModal.users, deptReportModal.name)} className="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded">CSV Dışa Aktar</button>
+                                <button onClick={() => { setDeptReportModal(null); }} className="px-3 py-1 text-sm text-gray-600">Kapat</button>
+                            </div>
+                        </div>
+                        {loadingDeptReport ? (
+                            <div className="p-8 text-center">Yükleniyor...</div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-100">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Kullanıcı</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">E-posta</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Rol</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Kayıt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {deptReportModal.users.length === 0 ? (
+                                            <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-500">Bu departmana ait kullanıcı bulunamadı.</td></tr>
+                                        ) : deptReportModal.users.map((u: any) => (
+                                            <tr key={u.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 text-sm">{u.name}</td>
+                                                <td className="px-4 py-2 text-sm text-gray-600">{u.email}</td>
+                                                <td className="px-4 py-2 text-sm">{u.role}</td>
+                                                <td className="px-4 py-2 text-sm text-gray-500">{new Date(u.created_at).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Deletion Request Detail Modal */}
             {deletionRequestModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1345,7 +1598,7 @@ export default function AdminPage() {
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                 <span className={`w-2 h-2 rounded-full ${deletionRequestModal.status === 'pending' ? 'bg-amber-500' :
-                                        deletionRequestModal.status === 'approved' ? 'bg-red-500' : 'bg-gray-500'
+                                    deletionRequestModal.status === 'approved' ? 'bg-red-500' : 'bg-gray-500'
                                     }`} />
                                 <span className="text-sm font-medium text-gray-700">
                                     {deletionRequestModal.status === 'pending' ? 'Beklemede' :
@@ -1474,6 +1727,42 @@ export default function AdminPage() {
                             </button>
                             <button
                                 onClick={() => setEditDeptModal(null)}
+                                className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+                            >
+                                İptal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {editTitleModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Briefcase className="w-5 h-5 text-amber-600" />
+                            <h3 className="text-lg font-bold text-gray-900">Unvanı Düzenle</h3>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-4">
+                            &quot;{editTitleModal.oldName}&quot; unvanını düzenliyorsunuz.
+                        </p>
+                        <input
+                            type="text"
+                            value={editTitleModal.newName}
+                            onChange={(e) => setEditTitleModal(prev => prev ? { ...prev, newName: e.target.value } : null)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleRenameTitle()}
+                            placeholder="Yeni unvan adı"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm mb-4"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleRenameTitle}
+                                disabled={savingTitle || !editTitleModal.newName.trim() || editTitleModal.newName.trim() === editTitleModal.oldName}
+                                className="flex-1 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
+                            >
+                                {savingTitle ? 'Kaydediliyor...' : 'Kaydet'}
+                            </button>
+                            <button
+                                onClick={() => setEditTitleModal(null)}
                                 className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
                             >
                                 İptal

@@ -39,6 +39,16 @@ export async function POST(request: Request) {
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
+        // Validate department/title against canonical lists if provided
+        if (department) {
+            const d = await getOne('SELECT id FROM departments WHERE name = $1', [String(department).trim()]);
+            if (!d) return NextResponse.json({ success: false, error: 'Geçersiz departman seçimi.' }, { status: 400 });
+        }
+        if (title) {
+            const t = await getOne('SELECT id FROM titles WHERE name = $1', [String(title).trim()]);
+            if (!t) return NextResponse.json({ success: false, error: 'Geçersiz unvan seçimi.' }, { status: 400 });
+        }
+
         const result = await query(
             `INSERT INTO users (email, password_hash, name, department, title)
        VALUES ($1, $2, $3, $4, $5)

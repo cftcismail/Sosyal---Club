@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Mail, Lock, User, Building, Briefcase, UserPlus } from 'lucide-react';
@@ -8,6 +8,20 @@ import { Users, Mail, Lock, User, Building, Briefcase, UserPlus } from 'lucide-r
 export default function RegisterPage() {
     const router = useRouter();
     const [form, setForm] = useState({ name: '', email: '', password: '', department: '', title: '' });
+    const [availableDepts, setAvailableDepts] = useState<{ id: string; name: string }[]>([]);
+    const [availableTitles, setAvailableTitles] = useState<{ id: string; name: string }[]>([]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const [dRes, tRes] = await Promise.all([fetch('/api/departments'), fetch('/api/titles')]);
+                const dData = await dRes.json();
+                const tData = await tRes.json();
+                if (dData.success) setAvailableDepts(dData.data);
+                if (tData.success) setAvailableTitles(tData.data);
+            } catch { }
+        })();
+    }, []);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -56,20 +70,31 @@ export default function RegisterPage() {
                             { key: 'name', label: 'Ad Soyad', icon: User, type: 'text', required: true },
                             { key: 'email', label: 'E-posta', icon: Mail, type: 'email', required: true },
                             { key: 'password', label: 'Şifre', icon: Lock, type: 'password', required: true },
-                            { key: 'department', label: 'Departman', icon: Building, type: 'text', required: false },
-                            { key: 'title', label: 'Unvan', icon: Briefcase, type: 'text', required: false },
+                            { key: 'department', label: 'Departman', icon: Building, type: 'select', required: false },
+                            { key: 'title', label: 'Unvan', icon: Briefcase, type: 'select', required: false },
                         ].map(({ key, label, icon: Icon, type, required }) => (
                             <div key={key}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                                 <div className="relative">
                                     <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type={type}
-                                        value={(form as any)[key]}
-                                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                                        required={required}
-                                    />
+                                    {type === 'select' ? (
+                                        <select
+                                            value={(form as any)[key]}
+                                            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                        >
+                                            <option value="">Seçiniz</option>
+                                            {key === 'department' ? availableDepts.map(d => <option key={d.id} value={d.name}>{d.name}</option>) : availableTitles.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={type}
+                                            value={(form as any)[key]}
+                                            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                            required={required}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         ))}

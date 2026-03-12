@@ -27,6 +27,8 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState<any>({});
+    const [availableDepts, setAvailableDepts] = useState<{ id: string; name: string }[]>([]);
+    const [availableTitles, setAvailableTitles] = useState<{ id: string; name: string }[]>([]);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [newInterest, setNewInterest] = useState('');
@@ -48,6 +50,7 @@ export default function ProfilePage() {
     useEffect(() => {
         if (status === 'unauthenticated') router.push('/login');
         if (status === 'authenticated') loadProfile();
+        loadSelects();
     }, [status]);
 
     const loadProfile = async () => {
@@ -56,6 +59,18 @@ export default function ProfilePage() {
         if (data.success) {
             setProfile(data.data);
             setForm(data.data);
+        }
+    };
+
+    const loadSelects = async () => {
+        try {
+            const [dRes, tRes] = await Promise.all([fetch('/api/departments'), fetch('/api/titles')]);
+            const dData = await dRes.json();
+            const tData = await tRes.json();
+            if (dData.success) setAvailableDepts(dData.data);
+            if (tData.success) setAvailableTitles(tData.data);
+        } catch {
+            // ignore
         }
     };
 
@@ -206,19 +221,29 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Departman</label>
-                                <input
+                                <select
                                     value={form.department || ''}
                                     onChange={(e) => setForm({ ...form, department: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                                />
+                                >
+                                    <option value="">Seçiniz</option>
+                                    {availableDepts.map((d) => (
+                                        <option key={d.id} value={d.name}>{d.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Unvan</label>
-                                <input
+                                <select
                                     value={form.title || ''}
                                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                                />
+                                >
+                                    <option value="">Seçiniz</option>
+                                    {availableTitles.map((t) => (
+                                        <option key={t.id} value={t.name}>{t.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>

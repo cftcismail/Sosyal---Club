@@ -1,0 +1,2 @@
+Departman ve ünvanları veritabanında canonical olarak tutup, kullanıcıların kayıt ve profil güncelleme sırasında bu listelerden seçim yapmasını sağlamak, veri tutarlılığı açısından önemlidir. Bu nedenle, kayıt ve profil güncelleme API'lerinde departman ve ünvan doğrulaması ekledim. Ayrıca, admin panelinde departman raporlarında CSV dışa aktarma özelliği ekle
+ek olarak departman ve unvanlara excel ile hızlı ekleme ve toplu silme özelliği getir.

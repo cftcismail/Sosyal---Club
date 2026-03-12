@@ -65,6 +65,16 @@ export async function PATCH(request: Request) {
         const bioErr = validateMax(body.bio, 2000, 'Hakkımda');
         if (bioErr) return NextResponse.json({ success: false, error: bioErr }, { status: 400 });
 
+        // Verify provided department/title exist in canonical tables when present
+        if (body.department) {
+            const d = await getOne('SELECT id FROM departments WHERE name = $1', [String(body.department).trim()]);
+            if (!d) return NextResponse.json({ success: false, error: 'Geçersiz departman seçimi.' }, { status: 400 });
+        }
+        if (body.title) {
+            const t = await getOne('SELECT id FROM titles WHERE name = $1', [String(body.title).trim()]);
+            if (!t) return NextResponse.json({ success: false, error: 'Geçersiz unvan seçimi.' }, { status: 400 });
+        }
+
         if (body.avatar_url !== undefined && body.avatar_url !== null) {
             if (typeof body.avatar_url !== 'string') {
                 return NextResponse.json({ success: false, error: 'Avatar URL geçersiz.' }, { status: 400 });
