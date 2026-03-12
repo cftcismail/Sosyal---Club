@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMany } from '@/lib/db';
+import { getMany, getOne, query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -47,9 +47,36 @@ export async function GET(request: Request) {
             sql += ` AND c.status = $${params.length}`;
         }
 
-        sql += ` GROUP BY c.id, u.name, dr.id, ru.name ORDER BY c.created_at DESC`;
+        sql += `
+            GROUP BY c.id, u.name, dr.id, dr.status, dr.reason, dr.created_at, ru.name
+            ORDER BY c.created_at DESC
+        `;
         const clubs = await getMany(sql, params);
         return NextResponse.json({ success: true, data: clubs });
+    } catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'admin') {
+            return NextResponse.json({ success: false, error: 'Yetkiniz yok.' }, { status: 403 });
+        }
+
+        const { club_id } = await request.json();
+        if (!club_id) {
+            return NextResponse.json({ success: false, error: 'Kulüp ID gerekli.' }, { status: 400 });
+        }
+
+        const existing = await getOne('SELECT id FROM clubs WHERE id = $1', [club_id]);
+        if (!existing) {
+            return NextResponse.json({ success: false, error: 'Kulüp bulunamadı.' }, { status: 404 });
+        }
+
+        await query('DELETE FROM clubs WHERE id = $1', [club_id]);
+        return NextResponse.json({ success: true, message: 'Kulüp silindi.' });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

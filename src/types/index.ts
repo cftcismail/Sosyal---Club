@@ -7,6 +7,7 @@ export interface User {
     avatar_url?: string;
     avatar_preset?: 'female' | 'male' | null;
     avatar_background?: string | null;
+    avatar_variant?: number | null;
     phone?: string;
     bio?: string;
     interests?: string[];
@@ -44,7 +45,11 @@ export interface ClubMember {
     user_name?: string;
     user_email?: string;
     user_department?: string;
+    user_title?: string;
     user_avatar?: string;
+    user_avatar_preset?: 'female' | 'male' | null;
+    user_avatar_background?: string | null;
+    user_avatar_variant?: number | null;
 }
 
 export interface Post {
@@ -58,6 +63,9 @@ export interface Post {
     created_at: string;
     author_name?: string;
     author_avatar?: string;
+    author_avatar_preset?: 'female' | 'male' | null;
+    author_avatar_background?: string | null;
+    author_avatar_variant?: number | null;
     author_department?: string;
     like_count?: number;
     comment_count?: number;
@@ -75,6 +83,9 @@ export interface Comment {
     created_at: string;
     author_name?: string;
     author_avatar?: string;
+    author_avatar_preset?: 'female' | 'male' | null;
+    author_avatar_background?: string | null;
+    author_avatar_variant?: number | null;
 }
 
 export interface Event {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Home,
     Users,
@@ -15,13 +15,26 @@ import {
     Plus,
     User,
 } from 'lucide-react';
+import { timeAgo } from '@/lib/utils';
+
+type NotificationItem = {
+    id: string;
+    type: string;
+    title: string;
+    message?: string | null;
+    link?: string | null;
+    is_read: boolean;
+    created_at: string;
+};
 
 export default function Navbar() {
     const { data: session } = useSession();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [notifLoading, setNotifLoading] = useState(false);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const notifRef = useRef<HTMLDivElement>(null);
     const user = session?.user as any;
-
-    if (!session) return null;
 
     const navLinks = [
         { href: '/dashboard', label: 'Ana Sayfa', icon: Home },
@@ -29,8 +42,51 @@ export default function Navbar() {
         { href: '/events', label: 'Etkinlikler', icon: Calendar },
     ];
 
+    const importantTypes = new Set(['membership', 'club_approval', 'announcement']);
+    const importantUnread = notifications.filter((n) => !n.is_read && importantTypes.has(n.type));
+    const fallbackUnread = notifications.filter((n) => !n.is_read);
+    const shown = (importantUnread.length > 0 ? importantUnread : fallbackUnread).slice(0, 5);
+
+    const loadNotifications = async () => {
+        setNotifLoading(true);
+        try {
+            const res = await fetch('/api/notifications');
+            const data = await res.json();
+            if (data.success) setNotifications(data.data || []);
+        } catch {
+            // ignore
+        }
+        setNotifLoading(false);
+    };
+
+    const toggleNotifications = async () => {
+        setNotifOpen((prev) => !prev);
+    };
+
+    useEffect(() => {
+        if (!session) return;
+        if (notifOpen && notifications.length === 0) {
+            loadNotifications();
+        }
+    }, [notifOpen]);
+
+    useEffect(() => {
+        if (!session) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (!notifRef.current) return;
+            if (notifRef.current.contains(e.target as Node)) return;
+            setNotifOpen(false);
+        };
+        if (notifOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [notifOpen]);
+
+    if (!session) return null;
+
     return (
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50 shadow-soft">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     {/* Logo */}
@@ -78,13 +134,86 @@ export default function Navbar() {
                             Kulüp Kur
                         </Link>
 
-                        <Link href="/notifications" className="relative p-2 text-gray-500 hover:text-primary-600 transition">
-                            <Bell className="w-5 h-5" />
-                        </Link>
+                        <div className="relative" ref={notifRef}>
+                            <button
+                                type="button"
+                                onClick={toggleNotifications}
+                                className="relative p-2 text-gray-500 hover:text-primary-600 transition"
+                                aria-label="Bildirimler"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {fallbackUnread.length > 0 && (
+                                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary-600" />
+                                )}
+                            </button>
+
+                            {notifOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-gray-100 bg-white shadow-soft overflow-hidden animate-slide-up">
+                                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-gray-900">Önemli Bildirimler</p>
+                                        <button
+                                            type="button"
+                                            onClick={loadNotifications}
+                                            className="text-xs text-gray-500 hover:text-gray-700"
+                                        >
+                                            Yenile
+                                        </button>
+                                    </div>
+
+                                    <div className="max-h-96 overflow-auto">
+                                        {notifLoading ? (
+                                            <p className="px-4 py-4 text-sm text-gray-500">Yükleniyor...</p>
+                                        ) : shown.length === 0 ? (
+                                            <p className="px-4 py-4 text-sm text-gray-500">Önemli bildirim yok.</p>
+                                        ) : (
+                                            shown.map((n) => (
+                                                <button
+                                                    key={n.id}
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        try {
+                                                            await fetch('/api/notifications', {
+                                                                method: 'PATCH',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ id: n.id }),
+                                                            });
+                                                        } catch {
+                                                            // ignore
+                                                        }
+                                                        setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
+                                                        const href = n.link || '/notifications';
+                                                        window.location.href = href;
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition"
+                                                >
+                                                    <p className="text-sm font-medium text-gray-900 line-clamp-1">{n.title}</p>
+                                                    {n.message && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>}
+                                                    <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="px-4 py-3 border-t border-gray-100">
+                                        <Link
+                                            href="/notifications"
+                                            onClick={() => setNotifOpen(false)}
+                                            className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                                        >
+                                            Tüm Bildirimleri Gör
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         <Link href="/profile" className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition">
-                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                                <User className="w-4 h-4 text-primary-600" />
+                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-4 h-4 text-primary-600" />
+                                )}
                             </div>
                             <span className="hidden lg:block text-sm font-medium text-gray-700">
                                 {user?.name}

@@ -13,6 +13,9 @@ export async function GET(request: Request) {
       SELECT p.*,
         u.name AS author_name,
         u.avatar_url AS author_avatar,
+        u.avatar_preset AS author_avatar_preset,
+        u.avatar_background AS author_avatar_background,
+        u.avatar_variant AS author_avatar_variant,
         u.department AS author_department,
         c.name AS club_name,
         c.slug AS club_slug,
@@ -50,7 +53,7 @@ export async function GET(request: Request) {
         }
 
         sql += `
-      GROUP BY p.id, u.name, u.avatar_url, u.department, c.name, c.slug
+      GROUP BY p.id, u.name, u.avatar_url, u.avatar_preset, u.avatar_background, u.avatar_variant, u.department, c.name, c.slug
       ORDER BY p.is_pinned DESC, p.created_at DESC
       LIMIT 50
     `;

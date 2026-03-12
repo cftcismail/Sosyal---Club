@@ -26,7 +26,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         EXISTS(
           SELECT 1 FROM club_members WHERE club_id = c.id AND user_id = $2 AND membership_status = 'approved'
         ) AS is_member,
-        (SELECT role FROM club_members WHERE club_id = c.id AND user_id = $2 AND membership_status = 'approved') AS my_role
+                (SELECT role FROM club_members WHERE club_id = c.id AND user_id = $2 AND membership_status = 'approved') AS my_role,
+                (SELECT membership_status FROM club_members WHERE club_id = c.id AND user_id = $2) AS my_membership_status
       `;
         }
 
@@ -53,7 +54,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         // Üyeleri getir
         const members = await getMany(
-            `SELECT cm.*, u.name AS user_name, u.email AS user_email, u.department AS user_department, u.avatar_url AS user_avatar
+            `SELECT cm.*, 
+                u.name AS user_name, 
+                u.email AS user_email, 
+                u.department AS user_department, 
+                u.title AS user_title,
+                u.avatar_url AS user_avatar,
+                u.avatar_preset AS user_avatar_preset,
+                u.avatar_background AS user_avatar_background,
+                u.avatar_variant AS user_avatar_variant
        FROM club_members cm
        JOIN users u ON u.id = cm.user_id
        WHERE cm.club_id = $1 AND cm.membership_status = 'approved'
@@ -63,7 +72,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         // Bekleyen üyeleri getir
         const pending_members = await getMany(
-            `SELECT cm.*, u.name AS user_name, u.email AS user_email, u.department AS user_department
+            `SELECT cm.*, 
+                u.name AS user_name, 
+                u.email AS user_email, 
+                u.department AS user_department,
+                u.avatar_url AS user_avatar,
+                u.avatar_preset AS user_avatar_preset,
+                u.avatar_background AS user_avatar_background,
+                u.avatar_variant AS user_avatar_variant
        FROM club_members cm
        JOIN users u ON u.id = cm.user_id
        WHERE cm.club_id = $1 AND cm.membership_status = 'pending'

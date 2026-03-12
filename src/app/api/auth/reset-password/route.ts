@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server';
 import { getOne, query } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { getRequestIp, rateLimit } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
     try {
+        const ip = getRequestIp(request);
+        const rl = rateLimit(`reset-password:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 });
+        if (!rl.ok) {
+            return NextResponse.json({ success: false, error: 'Çok fazla istek. Lütfen sonra tekrar deneyin.' }, { status: 429 });
+        }
+
         const { token, password } = await request.json();
 
         if (!token || !password) {
             return NextResponse.json({ success: false, error: 'Token ve şifre gereklidir.' }, { status: 400 });
         }
 
-        if (password.length < 6) {
-            return NextResponse.json({ success: false, error: 'Şifre en az 6 karakter olmalıdır.' }, { status: 400 });
+        if (typeof password !== 'string' || password.length < 8) {
+            return NextResponse.json({ success: false, error: 'Şifre en az 8 karakter olmalıdır.' }, { status: 400 });
         }
 
         // Find valid token

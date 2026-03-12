@@ -8,7 +8,7 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+                sans: ['var(--font-inter)', 'Inter', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
             },
             colors: {
                 primary: {
@@ -22,6 +22,33 @@ module.exports = {
                     700: '#1d4ed8',
                     800: '#1e40af',
                     900: '#1e3a8a',
+                },
+            },
+            borderRadius: {
+                '2xl': '1rem',
+                '3xl': '1.5rem',
+            },
+            boxShadow: {
+                'soft': '0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 4px 16px -4px rgba(0, 0, 0, 0.1)',
+                'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
+            },
+            animation: {
+                'fade-in': 'fadeIn 0.3s ease-out',
+                'slide-up': 'slideUp 0.3s ease-out',
+                'scale-in': 'scaleIn 0.2s ease-out',
+            },
+            keyframes: {
+                fadeIn: {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
+                slideUp: {
+                    '0%': { opacity: '0', transform: 'translateY(10px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
+                },
+                scaleIn: {
+                    '0%': { opacity: '0', transform: 'scale(0.95)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' },
                 },
             },
         },

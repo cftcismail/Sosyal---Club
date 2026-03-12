@@ -25,7 +25,19 @@ import {
     X,
     Paperclip,
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, buildAvatarDataUrl } from '@/lib/utils';
+
+function getMemberAvatarSrc(member: ClubMember) {
+    if (member.user_avatar) return member.user_avatar;
+    if (member.user_avatar_preset) {
+        return buildAvatarDataUrl(
+            member.user_avatar_preset,
+            member.user_avatar_background || 'sky',
+            typeof member.user_avatar_variant === 'number' ? member.user_avatar_variant : 0
+        );
+    }
+    return null;
+}
 
 export default function ClubDetailPage() {
     const { slug } = useParams();
@@ -652,8 +664,12 @@ export default function ClubDetailPage() {
                             <div className="divide-y divide-yellow-100">
                                 {pendingMembers.map((member) => (
                                     <div key={member.id} className="flex items-center gap-3 p-4">
-                                        <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-700 font-semibold text-sm">
-                                            {member.user_name?.charAt(0) || '?'}
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-yellow-700 font-semibold text-sm overflow-hidden bg-yellow-100">
+                                            {getMemberAvatarSrc(member) ? (
+                                                <img src={getMemberAvatarSrc(member)!} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                member.user_name?.charAt(0) || '?'
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium text-gray-900">{member.user_name}</p>
@@ -683,16 +699,20 @@ export default function ClubDetailPage() {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
                         {club.members?.map((member) => (
                             <div key={member.id} className="flex items-center gap-3 p-4">
-                                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm overflow-hidden">
-                                    {member.user_avatar ? (
-                                        <img src={member.user_avatar} alt="" className="w-full h-full object-cover" />
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm overflow-hidden bg-primary-100">
+                                    {getMemberAvatarSrc(member) ? (
+                                        <img src={getMemberAvatarSrc(member)!} alt="" className="w-full h-full object-cover" />
                                     ) : (
                                         member.user_name?.charAt(0) || '?'
                                     )}
                                 </div>
                                 <div className="flex-1">
                                     <p className="font-medium text-gray-900">{member.user_name}</p>
-                                    <p className="text-xs text-gray-500">{member.user_department} {member.user_email && `· ${member.user_email}`}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {member.user_title && <span className="text-primary-600">{member.user_title}</span>}
+                                        {member.user_title && member.user_department && ' · '}
+                                        {member.user_department}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {member.role === 'admin' && (

@@ -1,8 +1,0 @@
-admin ekranından klüpleri silme yetkisi ve klüpleri bir liste halinde görüntüleme yetkisi
-admin ekranından gönderilerin listelenmesi ve silinme yetkisi
-admin ekranından etkinlik ve anketlerin listelenmesi ve silinme yetkisi 
-kulübe kayıt olduktan sonra butonda başvuruda bekliyor şeklinde bir yazı olmalı.
-kişi klup açtıktan sonra klüpleri de silmesi için admin'e silinme talebi açmalı admin ekranlarından silinme olmalı.
-kayıt olan kullanıcı admin ekranından silinmeli.
-kullanıcı profil resminini kadın ve erkek avatarlardan seçilmesi arka planları ise farklı renkler ile değiştirilebilmesi.
-etkinliklerde katılım durumu belirtikten sonra durum belirten kişilerin katılım bilgisi de etkinlik içerisinde görünsün.

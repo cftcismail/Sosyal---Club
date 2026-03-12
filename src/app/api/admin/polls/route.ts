@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMany } from '@/lib/db';
+import { getMany, getOne, query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -34,6 +34,30 @@ export async function GET(request: Request) {
         sql += ` GROUP BY p.id, c.name, u.name ORDER BY p.created_at DESC LIMIT 100`;
         const polls = await getMany(sql, params);
         return NextResponse.json({ success: true, data: polls });
+    } catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'admin') {
+            return NextResponse.json({ success: false, error: 'Yetkiniz yok.' }, { status: 403 });
+        }
+
+        const { poll_id } = await request.json();
+        if (!poll_id) {
+            return NextResponse.json({ success: false, error: 'Anket ID gerekli.' }, { status: 400 });
+        }
+
+        const existing = await getOne('SELECT id FROM polls WHERE id = $1', [poll_id]);
+        if (!existing) {
+            return NextResponse.json({ success: false, error: 'Anket bulunamadı.' }, { status: 404 });
+        }
+
+        await query('DELETE FROM polls WHERE id = $1', [poll_id]);
+        return NextResponse.json({ success: true, message: 'Anket silindi.' });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

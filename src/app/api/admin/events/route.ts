@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMany } from '@/lib/db';
+import { getMany, getOne, query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -34,6 +34,30 @@ export async function GET(request: Request) {
         sql += ` GROUP BY e.id, c.name, u.name ORDER BY e.start_time DESC LIMIT 100`;
         const events = await getMany(sql, params);
         return NextResponse.json({ success: true, data: events });
+    } catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'admin') {
+            return NextResponse.json({ success: false, error: 'Yetkiniz yok.' }, { status: 403 });
+        }
+
+        const { event_id } = await request.json();
+        if (!event_id) {
+            return NextResponse.json({ success: false, error: 'Etkinlik ID gerekli.' }, { status: 400 });
+        }
+
+        const existing = await getOne('SELECT id FROM events WHERE id = $1', [event_id]);
+        if (!existing) {
+            return NextResponse.json({ success: false, error: 'Etkinlik bulunamadı.' }, { status: 404 });
+        }
+
+        await query('DELETE FROM events WHERE id = $1', [event_id]);
+        return NextResponse.json({ success: true, message: 'Etkinlik silindi.' });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

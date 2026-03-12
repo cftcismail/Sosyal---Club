@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
 import { getOne, query } from '@/lib/db';
 import crypto from 'crypto';
+import { getRequestIp, rateLimit } from '@/lib/rateLimit';
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
     try {
+        const ip = getRequestIp(request);
+        const rl = rateLimit(`forgot-password:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 });
+        if (!rl.ok) {
+            return NextResponse.json({ success: false, error: 'Çok fazla istek. Lütfen sonra tekrar deneyin.' }, { status: 429 });
+        }
+
         const { email } = await request.json();
 
-        if (!email) {
+        if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
             return NextResponse.json({ success: false, error: 'E-posta gereklidir.' }, { status: 400 });
         }
 
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
 
         // Insert new token
         await query(
-            'INSERT INTO password_reset_tokens (id, user_id, token, expires_at) VALUES (gen_random_uuid(), $1, $2, $3)',
+            'INSERT INTO password_reset_tokens (id, user_id, token, expires_at) VALUES (uuid_generate_v4(), $1, $2, $3)',
             [user.id, token, expiresAt.toISOString()]
         );
 
@@ -42,12 +51,16 @@ export async function POST(request: Request) {
 
         console.log(`[Password Reset] User: ${user.email}, URL: ${resetUrl}`);
 
-        return NextResponse.json({
+        const response: any = {
             success: true,
             message: 'E-posta adresinize şifre sıfırlama bağlantısı gönderildi.',
-            // DEV ONLY: Remove in production
-            dev_reset_url: resetUrl,
-        });
+        };
+
+        if (process.env.NODE_ENV !== 'production') {
+            response.dev_reset_url = resetUrl;
+        }
+
+        return NextResponse.json(response);
     } catch (error) {
         console.error('Forgot password error:', error);
         return NextResponse.json({ success: false, error: 'Sunucu hatası.' }, { status: 500 });

@@ -4,8 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, Mail, Building, Briefcase, Tag, Users, Pencil, Save, X, Camera, Phone, FileText } from 'lucide-react';
-import { buildAvatarDataUrl, cn, getAvatarPalette } from '@/lib/utils';
+import { User, Mail, Building, Briefcase, Tag, Users, Pencil, Save, X, Camera, Phone, FileText, Heart, Plus } from 'lucide-react';
+import { AVATAR_VARIANT_COUNT, buildAvatarDataUrl, cn, getAvatarPalette } from '@/lib/utils';
 
 const avatarPresets = [
     { value: 'female', label: 'Kadın Avatarı' },
@@ -29,7 +29,21 @@ export default function ProfilePage() {
     const [form, setForm] = useState<any>({});
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [newInterest, setNewInterest] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
+
+    const randomVariant = () => Math.floor(Math.random() * AVATAR_VARIANT_COUNT);
+
+    const getAvatarSrc = (data: any) => {
+        if (data?.avatar_url) return data.avatar_url;
+        if (data?.avatar_preset || data?.avatar_background) {
+            const preset = data?.avatar_preset || 'female';
+            const background = data?.avatar_background || 'sky';
+            const variant = typeof data?.avatar_variant === 'number' ? data.avatar_variant : 0;
+            return buildAvatarDataUrl(preset, background, variant);
+        }
+        return null;
+    };
 
     useEffect(() => {
         if (status === 'unauthenticated') router.push('/login');
@@ -47,25 +61,39 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         setSaving(true);
+        const payload: any = {
+            name: form.name,
+            department: form.department,
+            title: form.title,
+            phone: form.phone,
+            bio: form.bio,
+            interests: form.interests || [],
+            avatar_preset: form.avatar_preset,
+            avatar_background: form.avatar_background,
+            avatar_variant: form.avatar_variant,
+        };
+
+        // avatar_url sadece upload URL'si olmalı; data URL (hazır avatar) DB'ye yazılmamalı.
+        if (form.avatar_url === null) {
+            payload.avatar_url = null;
+        } else if (typeof form.avatar_url === 'string') {
+            if (!form.avatar_url.startsWith('data:') && form.avatar_url.length <= 500) {
+                payload.avatar_url = form.avatar_url;
+            }
+        }
+
         const res = await fetch('/api/profile', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: form.name,
-                department: form.department,
-                title: form.title,
-                phone: form.phone,
-                bio: form.bio,
-                avatar_url: form.avatar_url,
-                avatar_preset: form.avatar_preset,
-                avatar_background: form.avatar_background,
-            }),
+            body: JSON.stringify(payload),
         });
         const data = await res.json();
         setSaving(false);
         if (data.success) {
             setProfile(data.data);
             setEditing(false);
+        } else {
+            alert(data.error || 'Profil kaydedilemedi.');
         }
     };
 
@@ -79,14 +107,16 @@ export default function ProfilePage() {
         const data = await res.json();
         setUploading(false);
         if (data.success) {
-            setForm({ ...form, avatar_url: data.data.url });
+            setForm({ ...form, avatar_url: data.data.url, avatar_preset: null, avatar_background: null });
             // Auto-save avatar
             await fetch('/api/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ avatar_url: data.data.url }),
             });
-            setProfile((prev: any) => ({ ...prev, avatar_url: data.data.url }));
+            setProfile((prev: any) => ({ ...prev, avatar_url: data.data.url, avatar_preset: null, avatar_background: null }));
+        } else {
+            alert(data.error || 'Avatar yüklenemedi.');
         }
     };
 
@@ -96,7 +126,8 @@ export default function ProfilePage() {
             ...form,
             avatar_preset: preset,
             avatar_background: background,
-            avatar_url: buildAvatarDataUrl(preset, background),
+            avatar_variant: randomVariant(),
+            avatar_url: null,
         });
     };
 
@@ -106,7 +137,8 @@ export default function ProfilePage() {
             ...form,
             avatar_preset: preset,
             avatar_background: background,
-            avatar_url: buildAvatarDataUrl(preset, background),
+            avatar_variant: randomVariant(),
+            avatar_url: null,
         });
     };
 
@@ -137,8 +169,12 @@ export default function ProfilePage() {
                 <div className="h-32 bg-gradient-to-r from-primary-500 to-primary-700 relative">
                     <div className="absolute -bottom-10 left-6">
                         <div className="w-20 h-20 bg-white rounded-full border-4 border-white flex items-center justify-center relative group">
-                            {profile.avatar_url ? (
-                                <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                            {getAvatarSrc(editing ? form : profile) ? (
+                                <img
+                                    src={getAvatarSrc(editing ? form : profile) as string}
+                                    alt=""
+                                    className="w-full h-full rounded-full object-cover"
+                                />
                             ) : (
                                 <div className="w-full h-full bg-primary-100 rounded-full flex items-center justify-center text-primary-700 text-2xl font-bold">
                                     {profile.name?.charAt(0) || '?'}
@@ -200,6 +236,59 @@ export default function ProfilePage() {
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">İlgi Alanları</label>
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {(form.interests || []).map((interest: string, index: number) => (
+                                        <span
+                                            key={index}
+                                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                                        >
+                                            {interest}
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm({
+                                                    ...form,
+                                                    interests: (form.interests || []).filter((_: string, i: number) => i !== index)
+                                                })}
+                                                className="ml-1 text-primary-400 hover:text-primary-600"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input
+                                        value={newInterest}
+                                        onChange={(e) => setNewInterest(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newInterest.trim()) {
+                                                e.preventDefault();
+                                                if (!form.interests?.includes(newInterest.trim())) {
+                                                    setForm({ ...form, interests: [...(form.interests || []), newInterest.trim()] });
+                                                }
+                                                setNewInterest('');
+                                            }
+                                        }}
+                                        placeholder="Yeni ilgi alanı ekle..."
+                                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (newInterest.trim() && !form.interests?.includes(newInterest.trim())) {
+                                                setForm({ ...form, interests: [...(form.interests || []), newInterest.trim()] });
+                                                setNewInterest('');
+                                            }
+                                        }}
+                                        className="px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Enter tuşu ile veya + butonuyla ilgi alanı ekleyin</p>
                             </div>
                             <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
                                 <div>
@@ -300,6 +389,26 @@ export default function ProfilePage() {
                                     </span>
                                 </div>
                             </div>
+
+                            {/* İlgi Alanları */}
+                            {profile.interests && profile.interests.length > 0 && (
+                                <div className="mt-6 pt-6 border-t border-gray-100">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Heart className="w-4 h-4 text-gray-400" />
+                                        <span className="text-sm font-medium text-gray-700">İlgi Alanları</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {profile.interests.map((interest: string, index: number) => (
+                                            <span
+                                                key={index}
+                                                className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                                            >
+                                                {interest}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mt-6 pt-6 border-t border-gray-100">
                                 <Link
