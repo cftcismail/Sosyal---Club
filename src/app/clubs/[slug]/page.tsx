@@ -134,13 +134,26 @@ export default function ClubDetailPage() {
         });
         const data = await res.json();
         if (data.success) {
-            setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, my_rsvp: rsvpStatus } : e)));
+            loadClub();
         }
     };
 
     const handleJoin = async () => {
         if (!club) return;
         const res = await fetch(`/api/clubs/${club.id}/join`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error);
+        if (data.success) loadClub();
+    };
+
+    const handleDeleteRequest = async () => {
+        if (!club) return;
+        const reason = window.prompt('Silme talebi için kısa bir not girebilirsiniz:', 'Kulüp artık aktif değil.');
+        const res = await fetch(`/api/clubs/${club.id}/delete-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+        });
         const data = await res.json();
         alert(data.message || data.error);
         if (data.success) loadClub();
@@ -258,6 +271,7 @@ export default function ClubDetailPage() {
     const user = session?.user as any;
     const isClubAdmin = club.my_role === 'admin' || user?.role === 'admin';
     const pendingMembers = club.pending_members || [];
+    const isPendingMember = club.my_membership_status === 'pending';
 
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
@@ -321,12 +335,31 @@ export default function ClubDetailPage() {
                         </div>
                         <div className="flex gap-2">
                             {club.is_member ? (
-                                <button
-                                    onClick={handleLeave}
-                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
-                                >
-                                    <LogOut className="w-4 h-4" /> Ayrıl
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleLeave}
+                                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                                    >
+                                        <LogOut className="w-4 h-4" /> Ayrıl
+                                    </button>
+                                    {isClubAdmin && club.deletion_request_status !== 'pending' && user?.role !== 'admin' && (
+                                        <button
+                                            onClick={handleDeleteRequest}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition"
+                                        >
+                                            <Settings className="w-4 h-4" /> Silme Talebi Aç
+                                        </button>
+                                    )}
+                                    {club.deletion_request_status === 'pending' && (
+                                        <span className="inline-flex items-center px-3 py-1.5 text-sm rounded-lg bg-amber-100 text-amber-700">
+                                            Silme talebi beklemede
+                                        </span>
+                                    )}
+                                </>
+                            ) : isPendingMember ? (
+                                <span className="inline-flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-700 rounded-lg">
+                                    <UserPlus className="w-4 h-4" /> Başvuruda Bekliyor
+                                </span>
                             ) : (
                                 <button
                                     onClick={handleJoin}

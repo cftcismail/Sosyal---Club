@@ -5,6 +5,8 @@ export interface User {
     department?: string;
     title?: string;
     avatar_url?: string;
+    avatar_preset?: 'female' | 'male' | null;
+    avatar_background?: string | null;
     phone?: string;
     bio?: string;
     interests?: string[];
@@ -26,7 +28,10 @@ export interface Club {
     created_at: string;
     member_count?: number;
     is_member?: boolean;
+    my_membership_status?: 'pending' | 'approved' | 'rejected';
     creator_name?: string;
+    deletion_request_id?: string | null;
+    deletion_request_status?: 'pending' | 'approved' | 'rejected' | null;
 }
 
 export interface ClubMember {
@@ -89,6 +94,17 @@ export interface Event {
     attending_count?: number;
     maybe_count?: number;
     my_rsvp?: string;
+    attendees?: EventAttendee[];
+}
+
+export interface EventAttendee {
+    id?: string;
+    user_id: string;
+    user_name: string;
+    user_avatar?: string;
+    user_department?: string;
+    status: 'attending' | 'declined' | 'maybe';
+    responded_at?: string;
 }
 
 export interface Notification {
@@ -132,6 +148,21 @@ export interface PollOption {
     sort_order: number;
     vote_count?: number;
     voters?: { user_id: string; user_name: string }[];
+}
+
+export interface ClubDeletionRequest {
+    id: string;
+    club_id: string;
+    requested_by: string;
+    reason?: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewed_by?: string | null;
+    reviewed_at?: string | null;
+    created_at: string;
+    club_name?: string;
+    club_slug?: string;
+    requester_name?: string;
+    reviewer_name?: string | null;
 }
 
 export interface ApiResponse<T = any> {

@@ -43,6 +43,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
             return NextResponse.json({ success: false, error: 'Kulüp bulunamadı.' }, { status: 404 });
         }
 
+        const deletionRequest = await getOne(
+            `SELECT id, status FROM club_deletion_requests
+             WHERE club_id = $1
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [club.id]
+        );
+
         // Üyeleri getir
         const members = await getMany(
             `SELECT cm.*, u.name AS user_name, u.email AS user_email, u.department AS user_department, u.avatar_url AS user_avatar
@@ -63,7 +71,42 @@ export async function GET(request: Request, { params }: { params: { id: string }
             [club.id]
         );
 
-        return NextResponse.json({ success: true, data: { ...club, members, pending_members } });
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...club,
+                members,
+                pending_members,
+                deletion_request_id: deletionRequest?.id || null,
+                deletion_request_status: deletionRequest?.status || null,
+            },
+        });
+    } catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+// DELETE /api/clubs/[id] - Kulübü sil
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'admin') {
+            return NextResponse.json({ success: false, error: 'Bu işlem için yetkiniz yok.' }, { status: 403 });
+        }
+
+        const { id } = params;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const existing = await getOne(
+            `SELECT id, name FROM clubs WHERE ${isUuid ? 'id = $1' : 'slug = $1'}`,
+            [id]
+        );
+
+        if (!existing) {
+            return NextResponse.json({ success: false, error: 'Kulüp bulunamadı.' }, { status: 404 });
+        }
+
+        await query('DELETE FROM clubs WHERE id = $1', [existing.id]);
+        return NextResponse.json({ success: true, message: 'Kulüp silindi.' });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

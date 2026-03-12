@@ -21,7 +21,8 @@ export async function GET(request: Request) {
             sql += `,
         EXISTS(
           SELECT 1 FROM club_members WHERE club_id = c.id AND user_id = $2 AND membership_status = 'approved'
-        ) AS is_member
+                ) AS is_member,
+                (SELECT membership_status FROM club_members WHERE club_id = c.id AND user_id = $2) AS my_membership_status
       `;
         }
 

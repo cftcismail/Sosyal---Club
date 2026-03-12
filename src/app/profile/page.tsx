@@ -5,6 +5,21 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Mail, Building, Briefcase, Tag, Users, Pencil, Save, X, Camera, Phone, FileText } from 'lucide-react';
+import { buildAvatarDataUrl, cn, getAvatarPalette } from '@/lib/utils';
+
+const avatarPresets = [
+    { value: 'female', label: 'Kadın Avatarı' },
+    { value: 'male', label: 'Erkek Avatarı' },
+] as const;
+
+const avatarColors = [
+    { value: 'coral', label: 'Mercan' },
+    { value: 'sky', label: 'Gökyüzü' },
+    { value: 'mint', label: 'Mint' },
+    { value: 'amber', label: 'Amber' },
+    { value: 'plum', label: 'Erik' },
+    { value: 'slate', label: 'Slate' },
+];
 
 export default function ProfilePage() {
     const { data: session, status } = useSession();
@@ -42,6 +57,8 @@ export default function ProfilePage() {
                 phone: form.phone,
                 bio: form.bio,
                 avatar_url: form.avatar_url,
+                avatar_preset: form.avatar_preset,
+                avatar_background: form.avatar_background,
             }),
         });
         const data = await res.json();
@@ -71,6 +88,26 @@ export default function ProfilePage() {
             });
             setProfile((prev: any) => ({ ...prev, avatar_url: data.data.url }));
         }
+    };
+
+    const handleAvatarPresetChange = (preset: 'female' | 'male') => {
+        const background = form.avatar_background || 'sky';
+        setForm({
+            ...form,
+            avatar_preset: preset,
+            avatar_background: background,
+            avatar_url: buildAvatarDataUrl(preset, background),
+        });
+    };
+
+    const handleAvatarBackgroundChange = (background: string) => {
+        const preset = form.avatar_preset || 'female';
+        setForm({
+            ...form,
+            avatar_preset: preset,
+            avatar_background: background,
+            avatar_url: buildAvatarDataUrl(preset, background),
+        });
     };
 
     if (status === 'loading' || !profile) {
@@ -163,6 +200,54 @@ export default function ProfilePage() {
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
                                 />
+                            </div>
+                            <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-700 mb-2">Hazır Avatar Seç</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {avatarPresets.map((preset) => (
+                                            <button
+                                                key={preset.value}
+                                                type="button"
+                                                onClick={() => handleAvatarPresetChange(preset.value)}
+                                                className={cn(
+                                                    'rounded-xl border px-3 py-3 text-left transition',
+                                                    form.avatar_preset === preset.value
+                                                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                                        : 'border-gray-200 bg-white hover:border-primary-200'
+                                                )}
+                                            >
+                                                <span className="block text-sm font-medium">{preset.label}</span>
+                                                <span className="block mt-1 text-xs text-gray-500">Tek tıkla profil resmi oluştur.</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-700 mb-2">Arka Plan Rengi</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {avatarColors.map((color) => {
+                                            const palette = getAvatarPalette(color.value);
+                                            return (
+                                                <button
+                                                    key={color.value}
+                                                    type="button"
+                                                    onClick={() => handleAvatarBackgroundChange(color.value)}
+                                                    className={cn(
+                                                        'flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                                                        form.avatar_background === color.value
+                                                            ? 'border-gray-900 text-gray-900'
+                                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                                    )}
+                                                >
+                                                    <span className="h-4 w-4 rounded-full border border-white/70" style={{ backgroundColor: palette.background }} />
+                                                    {color.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500">İsterseniz hazır avatar seçebilir, isterseniz yine kendi fotoğrafınızı yükleyebilirsiniz.</p>
                             </div>
                             <div className="flex gap-2 pt-2">
                                 <button

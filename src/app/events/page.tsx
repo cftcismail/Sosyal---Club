@@ -33,7 +33,7 @@ export default function EventsPage() {
         });
         const data = await res.json();
         if (data.success) {
-            setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, my_rsvp: rsvpStatus } : e)));
+            loadEvents();
         }
     };
 

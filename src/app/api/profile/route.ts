@@ -11,7 +11,7 @@ export async function GET() {
         }
 
         const profile = await getOne(
-            `SELECT id, email, name, department, title, avatar_url, phone, bio, interests, role, created_at
+            `SELECT id, email, name, department, title, avatar_url, avatar_preset, avatar_background, phone, bio, interests, role, created_at
              FROM users WHERE id = $1`,
             [user.id]
         );
@@ -35,7 +35,7 @@ export async function PATCH(request: Request) {
         const values: any[] = [];
         let paramIndex = 1;
 
-        const allowed = ['name', 'department', 'title', 'avatar_url', 'phone', 'bio'];
+        const allowed = ['name', 'department', 'title', 'avatar_url', 'avatar_preset', 'avatar_background', 'phone', 'bio'];
         for (const key of allowed) {
             if (body[key] !== undefined) {
                 fields.push(`${key} = $${paramIndex++}`);
@@ -55,7 +55,7 @@ export async function PATCH(request: Request) {
         values.push(user.id);
         const result = await query(
             `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex}
-             RETURNING id, email, name, department, title, avatar_url, phone, bio, interests, role, created_at`,
+             RETURNING id, email, name, department, title, avatar_url, avatar_preset, avatar_background, phone, bio, interests, role, created_at`,
             values
         );
 

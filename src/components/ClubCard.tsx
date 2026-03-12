@@ -10,6 +10,8 @@ interface ClubCardProps {
 }
 
 export default function ClubCard({ club, onJoin }: ClubCardProps) {
+    const isPending = club.my_membership_status === 'pending';
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
             {/* Cover */}
@@ -52,6 +54,13 @@ export default function ClubCard({ club, onJoin }: ClubCardProps) {
                         >
                             Kulübe Git →
                         </Link>
+                    ) : isPending ? (
+                        <button
+                            disabled
+                            className="text-sm font-medium bg-amber-100 text-amber-700 px-4 py-1.5 rounded-lg cursor-not-allowed"
+                        >
+                            Başvuruda Bekliyor
+                        </button>
                     ) : (
                         <button
                             onClick={() => onJoin?.(club.id)}

@@ -19,6 +19,9 @@ export default function EventCard({ event, onRsvp }: EventCardProps) {
     const startDate = new Date(event.start_time);
     const day = startDate.getDate();
     const month = startDate.toLocaleDateString('tr-TR', { month: 'short' }).toUpperCase();
+    const attending = event.attendees?.filter((attendee) => attendee.status === 'attending') || [];
+    const maybe = event.attendees?.filter((attendee) => attendee.status === 'maybe') || [];
+    const declined = event.attendees?.filter((attendee) => attendee.status === 'declined') || [];
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
@@ -79,6 +82,26 @@ export default function EventCard({ event, onRsvp }: EventCardProps) {
                             </button>
                         ))}
                     </div>
+
+                    {event.attendees && event.attendees.length > 0 && (
+                        <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600">
+                            <p className="font-semibold text-gray-700 mb-2">Katılım Durumları</p>
+                            <div className="space-y-2">
+                                <div>
+                                    <span className="font-medium text-green-700">Katılıyorum:</span>{' '}
+                                    {attending.length > 0 ? attending.map((attendee) => attendee.user_name).join(', ') : 'Henüz yok'}
+                                </div>
+                                <div>
+                                    <span className="font-medium text-yellow-700">Belki:</span>{' '}
+                                    {maybe.length > 0 ? maybe.map((attendee) => attendee.user_name).join(', ') : 'Henüz yok'}
+                                </div>
+                                <div>
+                                    <span className="font-medium text-red-700">Katılmıyorum:</span>{' '}
+                                    {declined.length > 0 ? declined.map((attendee) => attendee.user_name).join(', ') : 'Henüz yok'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
