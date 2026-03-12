@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, MessageCircle, Pin, Megaphone, Send } from 'lucide-react';
+import { Heart, MessageCircle, Pin, Megaphone, Send, FileText, Paperclip } from 'lucide-react';
 import { timeAgo } from '@/lib/utils';
-import type { Post, Comment } from '@/types';
+import type { Post, Comment, PostAttachment } from '@/types';
 
 interface PostCardProps {
     post: Post;
@@ -90,6 +90,32 @@ export default function PostCard({ post, onLike, onComment }: PostCardProps) {
             <div className="px-4 py-2">
                 <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
             </div>
+
+            {/* Attachments */}
+            {post.attachments && post.attachments.length > 0 && (
+                <div className="px-4 py-2">
+                    <div className="grid gap-2">
+                        {post.attachments.map((att: any) => {
+                            if (att.file_type?.startsWith('image/')) {
+                                return (
+                                    <img key={att.id} src={att.file_url} alt={att.file_name} className="rounded-lg max-h-96 w-full object-cover" />
+                                );
+                            }
+                            if (att.file_type?.startsWith('video/')) {
+                                return (
+                                    <video key={att.id} src={att.file_url} controls className="rounded-lg max-h-96 w-full" />
+                                );
+                            }
+                            return (
+                                <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm text-primary-600 hover:bg-gray-100 transition">
+                                    <FileText className="w-4 h-4" />
+                                    {att.file_name}
+                                </a>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Actions */}
             <div className="px-4 py-2 flex items-center gap-4 border-t border-gray-50">

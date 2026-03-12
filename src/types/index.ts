@@ -5,6 +5,8 @@ export interface User {
     department?: string;
     title?: string;
     avatar_url?: string;
+    phone?: string;
+    bio?: string;
     interests?: string[];
     role: 'member' | 'club_admin' | 'admin';
     is_active: boolean;
@@ -17,6 +19,7 @@ export interface Club {
     slug: string;
     description?: string;
     cover_image?: string;
+    logo_url?: string;
     is_public: boolean;
     status: 'pending' | 'active' | 'archived';
     created_by: string;
@@ -56,6 +59,7 @@ export interface Post {
     is_liked?: boolean;
     club_name?: string;
     club_slug?: string;
+    attachments?: PostAttachment[];
 }
 
 export interface Comment {
@@ -96,6 +100,38 @@ export interface Notification {
     link?: string;
     is_read: boolean;
     created_at: string;
+}
+
+export interface PostAttachment {
+    id: string;
+    post_id: string;
+    file_url: string;
+    file_name: string;
+    file_type?: string;
+    file_size?: number;
+    created_at: string;
+}
+
+export interface Poll {
+    id: string;
+    club_id: string;
+    user_id: string;
+    question: string;
+    is_multiple_choice: boolean;
+    ends_at?: string;
+    created_at: string;
+    author_name?: string;
+    options: PollOption[];
+    my_votes?: string[];
+}
+
+export interface PollOption {
+    id: string;
+    poll_id: string;
+    option_text: string;
+    sort_order: number;
+    vote_count?: number;
+    voters?: { user_id: string; user_name: string }[];
 }
 
 export interface ApiResponse<T = any> {

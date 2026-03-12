@@ -53,7 +53,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
             [club.id]
         );
 
-        return NextResponse.json({ success: true, data: { ...club, members } });
+        // Bekleyen üyeleri getir
+        const pending_members = await getMany(
+            `SELECT cm.*, u.name AS user_name, u.email AS user_email, u.department AS user_department
+       FROM club_members cm
+       JOIN users u ON u.id = cm.user_id
+       WHERE cm.club_id = $1 AND cm.membership_status = 'pending'
+       ORDER BY cm.joined_at`,
+            [club.id]
+        );
+
+        return NextResponse.json({ success: true, data: { ...club, members, pending_members } });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -87,6 +97,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         if (body.name !== undefined) { fields.push(`name = $${paramIndex++}`); values.push(body.name); }
         if (body.description !== undefined) { fields.push(`description = $${paramIndex++}`); values.push(body.description); }
         if (body.is_public !== undefined) { fields.push(`is_public = $${paramIndex++}`); values.push(body.is_public); }
+        if (body.logo_url !== undefined) { fields.push(`logo_url = $${paramIndex++}`); values.push(body.logo_url); }
+        if (body.cover_image !== undefined) { fields.push(`cover_image = $${paramIndex++}`); values.push(body.cover_image); }
         if (body.status !== undefined && user.role === 'admin') {
             fields.push(`status = $${paramIndex++}`); values.push(body.status);
         }

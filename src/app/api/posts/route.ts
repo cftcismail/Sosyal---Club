@@ -56,6 +56,25 @@ export async function GET(request: Request) {
     `;
 
         const posts = await getMany(sql, params);
+
+        // Ekleri getir
+        if (posts.length > 0) {
+            const postIds = posts.map(p => p.id);
+            const placeholders = postIds.map((_, i) => `$${i + 1}`).join(',');
+            const attachments = await getMany(
+                `SELECT * FROM post_attachments WHERE post_id IN (${placeholders}) ORDER BY created_at`,
+                postIds
+            );
+            const attMap = new Map<string, any[]>();
+            for (const att of attachments) {
+                if (!attMap.has(att.post_id)) attMap.set(att.post_id, []);
+                attMap.get(att.post_id)!.push(att);
+            }
+            for (const post of posts) {
+                (post as any).attachments = attMap.get(post.id) || [];
+            }
+        }
+
         return NextResponse.json({ success: true, data: posts });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -70,7 +89,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: 'Giriş yapmalısınız.' }, { status: 401 });
         }
 
-        const { club_id, content, is_announcement } = await request.json();
+        const { club_id, content, is_announcement, attachments } = await request.json();
         if (!club_id || !content) {
             return NextResponse.json({ success: false, error: 'Kulüp ve içerik zorunludur.' }, { status: 400 });
         }
@@ -95,7 +114,20 @@ export async function POST(request: Request) {
             [club_id, user.id, content, canAnnounce || false]
         );
 
-        return NextResponse.json({ success: true, data: result.rows[0] });
+        const post = result.rows[0];
+
+        // Ekleri kaydet
+        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+            for (const att of attachments) {
+                await query(
+                    `INSERT INTO post_attachments (post_id, file_url, file_name, file_type)
+                     VALUES ($1, $2, $3, $4)`,
+                    [post.id, att.url, att.name, att.type || null]
+                );
+            }
+        }
+
+        return NextResponse.json({ success: true, data: post });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

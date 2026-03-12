@@ -14,6 +14,7 @@ export default function ClubsPage() {
     const [clubs, setClubs] = useState<Club[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -44,14 +45,26 @@ export default function ClubsPage() {
         const data = await res.json();
         if (data.success) {
             loadClubs(search);
+            setToast({ message: data.message || 'Başvurunuz gönderildi, onay bekleniyor.', type: 'success' });
+        } else {
+            setToast({ message: data.error || data.message || 'Bir hata oluştu.', type: data.message ? 'info' : 'error' });
         }
-        alert(data.message || data.error);
+        setTimeout(() => setToast(null), 4000);
     };
 
     if (status === 'loading') return null;
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-medium transition-all animate-in ${toast.type === 'success' ? 'bg-green-600 text-white' :
+                        toast.type === 'error' ? 'bg-red-600 text-white' :
+                            'bg-blue-600 text-white'
+                    }`}>
+                    {toast.message}
+                </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
