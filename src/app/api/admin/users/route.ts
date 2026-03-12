@@ -107,28 +107,3 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
-
-// DELETE /api/admin/users?id=xxx - Delete a user
-export async function DELETE(request: Request) {
-    try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'admin') {
-            return NextResponse.json({ success: false, error: 'Yetkiniz yok.' }, { status: 403 });
-        }
-
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('id');
-        if (!userId) {
-            return NextResponse.json({ success: false, error: 'Kullanıcı ID gerekli.' }, { status: 400 });
-        }
-
-        if (userId === user.id) {
-            return NextResponse.json({ success: false, error: 'Kendinizi silemezsiniz.' }, { status: 400 });
-        }
-
-        await query('DELETE FROM users WHERE id = $1', [userId]);
-        return NextResponse.json({ success: true, message: 'Kullanıcı silindi.' });
-    } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-}

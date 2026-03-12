@@ -4,7 +4,7 @@ import Providers from '@/components/Providers';
 import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
-    title: 'Sosyal Kulüp - Şirket İçi Sosyal Platform',
+    title: 'Sosyal Kulüp',
     description: 'Şirket içi sosyal kulüp ve etkinlik platformu',
 };
 

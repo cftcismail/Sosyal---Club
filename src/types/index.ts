@@ -26,7 +26,6 @@ export interface Club {
     created_at: string;
     member_count?: number;
     is_member?: boolean;
-    is_pending?: boolean;
     creator_name?: string;
 }
 
