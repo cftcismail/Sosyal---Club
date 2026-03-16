@@ -37,12 +37,12 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="card interactive-lift animate-fade-in">
             {/* Header */}
             <div className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-700">
+                        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700">
                             <BarChart3 className="w-5 h-5" />
                         </div>
                         <div>
@@ -51,7 +51,7 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
                         </div>
                     </div>
                     {poll.is_multiple_choice && (
-                        <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">Çoklu Seçim</span>
+                        <span className="text-xs bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full border border-purple-100">Çoklu Seçim</span>
                     )}
                 </div>
             </div>
@@ -73,11 +73,11 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
                             <button
                                 onClick={() => handleSelect(opt.id)}
                                 disabled={!!hasVoted}
-                                className={`w-full text-left rounded-lg border transition relative overflow-hidden ${isMyVote
-                                        ? 'border-purple-300 bg-purple-50'
-                                        : isSelected
-                                            ? 'border-primary-400 bg-primary-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                className={`w-full text-left rounded-xl border transition relative overflow-hidden ${isMyVote
+                                    ? 'border-purple-300 bg-purple-50'
+                                    : isSelected
+                                        ? 'border-primary-400 bg-primary-50'
+                                        : 'border-gray-200 hover:border-primary-200 hover:bg-primary-50/40'
                                     } ${hasVoted ? 'cursor-default' : 'cursor-pointer'}`}
                             >
                                 {hasVoted && (
@@ -110,7 +110,7 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
                                 <div className="mt-1">
                                     <button
                                         onClick={() => setExpandedOption(expandedOption === opt.id ? null : opt.id)}
-                                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 ml-3"
+                                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 ml-3 mt-1"
                                     >
                                         <Users className="w-3 h-3" />
                                         {opt.voters.length} kişi
@@ -119,7 +119,7 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
                                     {expandedOption === opt.id && (
                                         <div className="ml-3 mt-1 flex flex-wrap gap-1">
                                             {opt.voters.map((v) => (
-                                                <span key={v.user_id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span key={v.user_id} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full border border-gray-200">
                                                     {v.user_name}
                                                 </span>
                                             ))}
@@ -134,11 +134,11 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
 
             {/* Vote Button */}
             {!hasVoted && selectedOptions.length > 0 && (
-                <div className="px-4 py-3 border-t border-gray-50">
+                <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60">
                     {!showConfirm ? (
                         <button
                             onClick={() => setShowConfirm(true)}
-                            className="w-full py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition"
+                            className="w-full py-2.5 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-700 transition shadow-sm"
                         >
                             Oy Ver
                         </button>
@@ -148,13 +148,13 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
                             <div className="flex gap-2">
                                 <button
                                     onClick={handleConfirmVote}
-                                    className="flex-1 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition"
+                                    className="flex-1 py-2 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-700 transition"
                                 >
                                     Evet, Onayla
                                 </button>
                                 <button
                                     onClick={() => setShowConfirm(false)}
-                                    className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+                                    className="flex-1 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-100 transition"
                                 >
                                     İptal
                                 </button>
@@ -165,7 +165,7 @@ export default function PollCard({ poll, onVote }: PollCardProps) {
             )}
 
             {/* Total votes */}
-            <div className="px-4 py-2 border-t border-gray-50 text-xs text-gray-400">
+            <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-500 bg-white/70">
                 Toplam {totalVotes} oy
             </div>
         </div>

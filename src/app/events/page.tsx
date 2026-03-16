@@ -33,7 +33,19 @@ export default function EventsPage() {
         });
         const data = await res.json();
         if (data.success) {
-            loadEvents();
+            setEvents((prev) =>
+                prev.map((event) =>
+                    event.id === eventId
+                        ? {
+                            ...event,
+                            my_rsvp: data.data?.my_rsvp || rsvpStatus,
+                            attending_count: data.data?.attending_count ?? event.attending_count,
+                            maybe_count: data.data?.maybe_count ?? event.maybe_count,
+                            attendees: data.data?.attendees || event.attendees,
+                        }
+                        : event
+                )
+            );
         }
     };
 
@@ -47,7 +59,7 @@ export default function EventsPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-            <div className="mb-8">
+            <div className="mb-8 surface p-5 sm:p-6 animate-fade-in">
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                     <CalendarDays className="w-6 h-6 text-primary-600" />
                     Etkinlikler
@@ -56,7 +68,7 @@ export default function EventsPage() {
             </div>
 
             {events.length === 0 ? (
-                <div className="text-center py-16 text-gray-500">
+                <div className="surface text-center py-16 text-gray-500">
                     <CalendarDays className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg">Yaklaşan etkinlik yok.</p>
                     <p className="text-sm mt-1">Bir kulübe katılarak etkinlikleri görebilirsin.</p>

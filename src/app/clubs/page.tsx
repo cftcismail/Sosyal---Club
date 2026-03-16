@@ -58,14 +58,14 @@ export default function ClubsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Toast */}
             {toast && (
-                <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-medium transition-all animate-in ${toast.type === 'success' ? 'bg-green-600 text-white' :
-                        toast.type === 'error' ? 'bg-red-600 text-white' :
-                            'bg-blue-600 text-white'
+                <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-soft text-sm font-medium transition-all animate-slide-up ${toast.type === 'success' ? 'bg-green-600 text-white' :
+                    toast.type === 'error' ? 'bg-red-600 text-white' :
+                        'bg-blue-600 text-white'
                     }`}>
                     {toast.message}
                 </div>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 animate-fade-in">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Users className="w-6 h-6 text-primary-600" />
@@ -75,7 +75,7 @@ export default function ClubsPage() {
                 </div>
                 <Link
                     href="/clubs/new"
-                    className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition"
+                    className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-xl hover:bg-primary-700 transition shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
                     Yeni Kulüp Kur
@@ -84,13 +84,13 @@ export default function ClubsPage() {
 
             {/* Search */}
             <form onSubmit={handleSearch} className="mb-8">
-                <div className="relative max-w-md">
+                <div className="relative max-w-md surface p-1.5">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Kulüp ara..."
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-100 focus:border-primary-400 outline-none"
                     />
                 </div>
             </form>

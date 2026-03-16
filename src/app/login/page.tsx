@@ -35,19 +35,20 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
+        <div className="min-h-screen flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-md">
                 {/* Logo */}
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="text-center mb-8 animate-fade-in">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
                         <Users className="w-8 h-8 text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">Sosyal Kulüp</h1>
+                    <p className="kicker mb-1">Hoş geldin</p>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Sosyal Kulüp</h1>
                     <p className="text-gray-500 mt-1">Şirket içi sosyal platform</p>
                 </div>
 
                 {/* Form */}
-                <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="surface p-8 animate-slide-up">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Giriş Yap</h2>
 
                     {error && (
@@ -66,7 +67,7 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="ornek@sirket.com"
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input pl-10"
                                     required
                                 />
                             </div>
@@ -81,7 +82,7 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input pl-10"
                                     required
                                 />
                             </div>
@@ -90,7 +91,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
+                            className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
                         >
                             <LogIn className="w-4 h-4" />
                             {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
@@ -111,7 +112,7 @@ export default function LoginPage() {
                     </p>
 
                     {/* Demo info */}
-                    <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+                    <div className="mt-6 p-3 bg-gray-50/80 rounded-xl border border-gray-100">
                         <p className="text-xs font-medium text-gray-500 mb-2">Demo Hesaplar:</p>
                         <p className="text-xs text-gray-500">Admin: admin@sirket.com / admin123</p>
                         <p className="text-xs text-gray-500">Kullanıcı: ayse.yilmaz@sirket.com / user123</p>

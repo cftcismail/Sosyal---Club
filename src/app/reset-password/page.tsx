@@ -46,8 +46,8 @@ function ResetPasswordForm() {
 
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
-                <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+            <div className="min-h-screen flex items-center justify-center px-4 py-10">
+                <div className="surface p-8 max-w-md w-full text-center animate-fade-in">
                     <p className="text-gray-500 mb-4">Geçersiz bağlantı. Lütfen tekrar şifre sıfırlama talebinde bulunun.</p>
                     <Link href="/forgot-password" className="text-primary-600 font-medium hover:underline">
                         Şifremi Unuttum
@@ -58,17 +58,18 @@ function ResetPasswordForm() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
+        <div className="min-h-screen flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-md">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="text-center mb-8 animate-fade-in">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
                         <Users className="w-8 h-8 text-white" />
                     </div>
+                    <p className="kicker mb-1">Şifre yenileme</p>
                     <h1 className="text-3xl font-bold text-gray-900">Yeni Şifre</h1>
                     <p className="text-gray-500 mt-1">Yeni şifrenizi belirleyin.</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="surface p-8 animate-slide-up">
                     {success ? (
                         <div className="text-center">
                             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -80,7 +81,7 @@ function ResetPasswordForm() {
                             </p>
                             <Link
                                 href="/login"
-                                className="inline-flex items-center justify-center gap-2 w-full bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 transition"
+                                className="inline-flex items-center justify-center gap-2 w-full bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition shadow-sm"
                             >
                                 Giriş Yap
                             </Link>
@@ -103,7 +104,7 @@ function ResetPasswordForm() {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="En az 6 karakter"
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                            className="input pl-10"
                                             required
                                             minLength={6}
                                         />
@@ -119,7 +120,7 @@ function ResetPasswordForm() {
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             placeholder="Şifrenizi tekrar girin"
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                            className="input pl-10"
                                             required
                                             minLength={6}
                                         />
@@ -129,7 +130,7 @@ function ResetPasswordForm() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
+                                    className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
                                 >
                                     {loading ? 'Kaydediliyor...' : 'Şifreyi Değiştir'}
                                 </button>

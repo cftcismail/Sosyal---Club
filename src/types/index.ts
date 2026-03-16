@@ -80,6 +80,9 @@ export interface Comment {
     post_id: string;
     user_id: string;
     content: string;
+    image_url?: string;
+    image_name?: string;
+    image_type?: string;
     created_at: string;
     author_name?: string;
     author_avatar?: string;
@@ -112,6 +115,7 @@ export interface EventAttendee {
     id?: string;
     user_id: string;
     user_name: string;
+    user_email?: string;
     user_avatar?: string;
     user_department?: string;
     status: 'attending' | 'declined' | 'maybe';

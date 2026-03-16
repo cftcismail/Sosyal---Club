@@ -68,7 +68,7 @@ export async function GET(request: Request) {
             const placeholders = eventIds.map((_, index) => `$${index + 1}`).join(',');
             const attendees = await getMany(
                 `SELECT ea.event_id, ea.user_id, ea.status, ea.responded_at,
-                        u.name AS user_name, u.avatar_url AS user_avatar, u.department AS user_department
+                        u.name AS user_name, u.email AS user_email, u.avatar_url AS user_avatar, u.department AS user_department
                  FROM event_attendees ea
                  JOIN users u ON u.id = ea.user_id
                  WHERE ea.event_id IN (${placeholders})

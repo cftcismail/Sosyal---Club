@@ -2,10 +2,21 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+async function ensureTitlesTable() {
+    await query(`
+        CREATE TABLE IF NOT EXISTS titles (
+            id UUID PRIMARY KEY DEFAULT (md5(random()::text || clock_timestamp()::text)::uuid),
+            name VARCHAR(100) UNIQUE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+    `);
+}
+
 export async function POST(request: Request) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'admin') return NextResponse.json({ success: false, error: 'Yetkiniz yok.' }, { status: 403 });
+        await ensureTitlesTable();
 
         const { names } = await request.json();
         if (!Array.isArray(names) || names.length === 0) return NextResponse.json({ success: false, error: 'İsim listesi gerekli.' }, { status: 400 });

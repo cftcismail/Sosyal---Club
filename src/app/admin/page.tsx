@@ -85,12 +85,15 @@ export default function AdminPage() {
     const [loadingDeptReport, setLoadingDeptReport] = useState(false);
     const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
     const deptFileRef = useRef<HTMLInputElement | null>(null);
+    const [newDeptName, setNewDeptName] = useState('');
 
     // Titles
     const [titleList, setTitleList] = useState<{ id: string; name: string; created_at: string }[]>([]);
     const [loadingTitles, setLoadingTitles] = useState(false);
     const [editTitleModal, setEditTitleModal] = useState<{ id: string; oldName: string; newName: string } | null>(null);
     const [savingTitle, setSavingTitle] = useState(false);
+    const titleFileRef = useRef<HTMLInputElement | null>(null);
+    const [newTitleName, setNewTitleName] = useState('');
 
     // Role management
     const [roleModal, setRoleModal] = useState<{ userId: string; userName: string; currentRole: string } | null>(null);
@@ -248,6 +251,24 @@ export default function AdminPage() {
         await loadDepartments();
     };
 
+    const handleAddDepartment = async () => {
+        if (!newDeptName.trim()) return;
+        setSavingDept(true);
+        const res = await fetch('/api/admin/departments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newDeptName }),
+        });
+        const data = await res.json();
+        setSavingDept(false);
+        if (data.success) {
+            setNewDeptName('');
+            await loadDepartments();
+        } else {
+            alert(data.error || 'Departman eklenemedi.');
+        }
+    };
+
     const handleDeptBulkDelete = async () => {
         if (selectedDeptIds.length === 0) return;
         const choice = prompt(`Seçili ${selectedDeptIds.length} departmanı silmek istiyorsunuz.\n1) Boşalt\n2) Yeniden ata (hedef departman adı girin)\n\nLütfen 1 veya hedef departman adını yazın:`);
@@ -299,6 +320,23 @@ export default function AdminPage() {
         const data = await res.json();
         setSavingTitle(false);
         if (data.success) await loadTitles(); else alert(data.error);
+    };
+
+    const handleTitleCsvUpload = async (file: File | null) => {
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const names = lines.map(l => l.split(',')[0].replace(/^"|"$/g, '').trim()).filter(Boolean);
+        if (names.length === 0) return alert('Dosyada unvan bulunamadı.');
+
+        const res = await fetch('/api/admin/titles/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names }),
+        });
+        const data = await res.json();
+        alert(data.message || data.error);
+        if (data.success) await loadTitles();
     };
 
     const handleRenameTitle = async () => {
@@ -620,6 +658,99 @@ export default function AdminPage() {
         URL.revokeObjectURL(url);
     };
 
+    const downloadPersonsSample = () => {
+        const header = ['email', 'name', 'department', 'title'];
+        const sample = [['alice@example.com', 'Alice Örnek', 'Mühendislik', 'Mühendis']];
+        const csv = [header, ...sample].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'persons_sample.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const downloadDepartmentSample = () => {
+        const header = ['name'];
+        const sample = [['İnsan Kaynakları'], ['Yazılım Geliştirme']];
+        const csv = [header, ...sample].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'departments_sample.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const downloadTitleSample = () => {
+        const header = ['name'];
+        const sample = [['Mühendis'], ['Takım Lideri']];
+        const csv = [header, ...sample].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'titles_sample.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const parseCsvLine = (line: string) => {
+        const result: string[] = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
+            } else if (ch === ',' && !inQuotes) {
+                result.push(cur);
+                cur = '';
+            } else {
+                cur += ch;
+            }
+        }
+        result.push(cur);
+        return result.map(s => s.trim());
+    };
+
+    const handlePersonsCsvUpload = async (file: File | null) => {
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) return alert('Dosya boş.');
+        const header = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+        const required = ['email'];
+        if (!required.every(r => header.includes(r))) return alert('CSV başlığı en azından "email" sütununu içermelidir.');
+
+        const rows: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseCsvLine(lines[i]);
+            if (cols.length === 0) continue;
+            const obj: any = {};
+            for (let c = 0; c < header.length; c++) obj[header[c]] = cols[c] ?? '';
+            rows.push({ email: (obj.email || '').trim(), name: (obj.name || '').trim(), department: (obj.department || '').trim(), title: (obj.title || '').trim() });
+        }
+        if (rows.length === 0) return alert('İşlenecek satır bulunamadı.');
+
+        const res = await fetch('/api/admin/users/bulk-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message || 'İşlem tamamlandı.');
+            await Promise.all([loadDepartments(), loadTitles(), loadUsers()]);
+        } else {
+            alert(data.error || 'Hata oluştu.');
+        }
+    };
+
     const submitSearch = (event: FormEvent, loader: () => Promise<void> | void) => {
         event.preventDefault();
         loader();
@@ -646,7 +777,8 @@ export default function AdminPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-            <div className="mb-8">
+            <div className="surface p-5 sm:p-6 mb-8 animate-fade-in">
+                <p className="kicker mb-1">Yönetim Merkezi</p>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                     <Shield className="w-6 h-6 text-orange-500" />
                     Admin Paneli
@@ -654,7 +786,7 @@ export default function AdminPage() {
                 <p className="text-gray-500 mt-1">Platform verileri, silme işlemleri ve yönetim ekranları.</p>
             </div>
 
-            <div className="flex flex-wrap gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-100 mb-6">
+            <div className="surface p-1.5 mb-6 flex flex-wrap gap-1">
                 {([
                     { key: 'dashboard', label: 'Dashboard' },
                     { key: 'users', label: 'Kullanıcılar' },
@@ -667,7 +799,7 @@ export default function AdminPage() {
                     <button
                         key={key}
                         onClick={() => setActiveTab(key)}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === key ? 'bg-primary-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-xl transition ${activeTab === key ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
                     >
                         {label}
                     </button>
@@ -678,9 +810,9 @@ export default function AdminPage() {
                 <div className="space-y-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {statCards.map(({ label, value, icon: Icon, color }) => (
-                            <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <div key={label} className="surface p-5 interactive-lift">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center`}>
+                                    <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shadow-sm`}>
                                         <Icon className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
@@ -693,7 +825,7 @@ export default function AdminPage() {
                     </div>
 
                     <div className="grid gap-6 lg:grid-cols-2">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div className="card">
                             <div className="p-5 border-b border-gray-100 flex items-center gap-2">
                                 <Clock className="w-5 h-5 text-orange-500" />
                                 <h2 className="text-lg font-bold text-gray-900">Onay Bekleyen Kulüpler</h2>
@@ -730,7 +862,7 @@ export default function AdminPage() {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div className="card">
                             <div className="p-5 border-b border-gray-100 flex items-center gap-2">
                                 <Trash2 className="w-5 h-5 text-amber-600" />
                                 <h2 className="text-lg font-bold text-gray-900">Bekleyen Silme Talepleri</h2>
@@ -772,7 +904,16 @@ export default function AdminPage() {
 
             {activeTab === 'users' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
+                        <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-800 mb-2">Kullanıcılara Toplu Unvan/Departman Yükle (Excel/CSV)</h4>
+                            <div className="flex items-center gap-2">
+                                <input id="personsFileInput" type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handlePersonsCsvUpload(e.target.files?.[0] ?? null)} />
+                                <button onClick={() => (document.getElementById('personsFileInput') as HTMLInputElement)?.click()} className="px-3 py-2 bg-blue-50 text-blue-700 rounded">Dosya Yükle</button>
+                                <button onClick={downloadPersonsSample} className="px-3 py-2 bg-gray-50 text-gray-700 rounded">Örnek Excel (CSV) İndir</button>
+                                <span className="text-xs text-gray-500">Beklenen sütunlar: <strong>email</strong>, <strong>name</strong> (opsiyonel), <strong>department</strong>, <strong>title</strong></span>
+                            </div>
+                        </div>
                         <div className="flex flex-col lg:flex-row gap-3">
                             <form onSubmit={(event) => submitSearch(event, loadUsers)} className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -812,7 +953,7 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -901,7 +1042,7 @@ export default function AdminPage() {
 
             {activeTab === 'clubs' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
                         <div className="flex flex-col lg:flex-row gap-3">
                             <form onSubmit={(event) => submitSearch(event, loadClubs)} className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -925,7 +1066,7 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -1002,7 +1143,7 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="p-5 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                             <div className="flex items-center gap-2">
                                 <Trash2 className="w-5 h-5 text-amber-600" />
@@ -1161,19 +1302,19 @@ export default function AdminPage() {
 
             {activeTab === 'posts' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
                         <form onSubmit={(event) => submitSearch(event, loadPosts)} className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 value={postSearch}
                                 onChange={(event) => setPostSearch(event.target.value)}
                                 placeholder="Gönderi içeriği, kulüp veya yazar ara..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-100 focus:border-primary-400 outline-none text-sm"
                             />
                         </form>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -1222,19 +1363,19 @@ export default function AdminPage() {
 
             {activeTab === 'events' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
                         <form onSubmit={(event) => submitSearch(event, loadEvents)} className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 value={eventSearch}
                                 onChange={(event) => setEventSearch(event.target.value)}
                                 placeholder="Etkinlik, kulüp veya oluşturan kişi ara..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-100 focus:border-primary-400 outline-none text-sm"
                             />
                         </form>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -1285,19 +1426,19 @@ export default function AdminPage() {
 
             {activeTab === 'polls' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
                         <form onSubmit={(event) => submitSearch(event, loadPolls)} className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 value={pollSearch}
                                 onChange={(event) => setPollSearch(event.target.value)}
                                 placeholder="Anket sorusu, kulüp veya yazar ara..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-100 focus:border-primary-400 outline-none text-sm"
                             />
                         </form>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="card">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
                                 <thead className="bg-gray-50">
@@ -1346,7 +1487,7 @@ export default function AdminPage() {
 
             {activeTab === 'departments' && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div className="card">
                         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Building2 className="w-5 h-5 text-blue-600" />
@@ -1357,8 +1498,45 @@ export default function AdminPage() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <input ref={deptFileRef} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleDeptCsvUpload(e.target.files?.[0] ?? null)} />
-                                <button onClick={() => deptFileRef.current?.click()} className="text-sm text-gray-500 hover:text-gray-700 transition">CSV/Yükle</button>
                                 <button onClick={loadDepartments} className="text-sm text-gray-500 hover:text-gray-700 transition">Yenile</button>
+                            </div>
+                        </div>
+                        <div className="p-4 border-b border-gray-100 grid md:grid-cols-2 gap-3 bg-gray-50/70">
+                            <div className="rounded-xl border border-gray-200 bg-white p-3">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Manuel Ekle</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        value={newDeptName}
+                                        onChange={(e) => setNewDeptName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDepartment())}
+                                        placeholder="Yeni departman adı"
+                                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    />
+                                    <button
+                                        onClick={handleAddDepartment}
+                                        disabled={savingDept || !newDeptName.trim()}
+                                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm disabled:opacity-50"
+                                    >
+                                        Ekle
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 bg-white p-3">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Excel/CSV Toplu Ekle</p>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => deptFileRef.current?.click()}
+                                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition"
+                                    >
+                                        Dosya Seç ve Yükle
+                                    </button>
+                                    <button
+                                        onClick={downloadDepartmentSample}
+                                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition"
+                                    >
+                                        Örnek CSV İndir
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         {selectedDeptIds.length > 0 && (
@@ -1451,7 +1629,7 @@ export default function AdminPage() {
                         Departmanlar kullanıcıların profil bilgilerinden alınmaktadır. &quot;Kaldır&quot; işlemi departmanı silmez, bu departmandaki kullanıcıların departman alanını boşaltır.
                     </p>
                     {/* Titles management */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="surface p-4">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                                 <Briefcase className="w-5 h-5 text-emerald-600" />
@@ -1459,13 +1637,51 @@ export default function AdminPage() {
                                 <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">{titleList.length}</span>
                             </div>
                             <div className="flex items-center gap-2">
+                                <input ref={titleFileRef} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleTitleCsvUpload(e.target.files?.[0] ?? null)} />
                                 <button onClick={loadTitles} className="text-sm text-gray-500 hover:text-gray-700">Yenile</button>
                             </div>
                         </div>
 
-                        <div className="mb-3 flex gap-2">
-                            <input id="newTitleInput" placeholder="Yeni unvan ekle" className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
-                            <button onClick={() => { const el = document.getElementById('newTitleInput') as HTMLInputElement | null; if (el?.value) { handleAddTitle(el.value); el.value = ''; } }} className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg">Ekle</button>
+                        <div className="mb-3 grid md:grid-cols-2 gap-3">
+                            <div className="rounded-xl border border-gray-200 bg-white p-3">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Manuel Ekle</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        value={newTitleName}
+                                        onChange={(e) => setNewTitleName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTitle(newTitleName), setNewTitleName(''))}
+                                        placeholder="Yeni unvan ekle"
+                                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (!newTitleName.trim()) return;
+                                            handleAddTitle(newTitleName);
+                                            setNewTitleName('');
+                                        }}
+                                        className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg"
+                                    >
+                                        Ekle
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 bg-white p-3">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Excel/CSV Toplu Ekle</p>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => titleFileRef.current?.click()}
+                                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition"
+                                    >
+                                        Dosya Seç ve Yükle
+                                    </button>
+                                    <button
+                                        onClick={downloadTitleSample}
+                                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition"
+                                    >
+                                        Örnek CSV İndir
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto">

@@ -282,13 +282,14 @@ export default function ClubDetailPage() {
 
     const user = session?.user as any;
     const isClubAdmin = club.my_role === 'admin' || user?.role === 'admin';
+    const isClubCreator = club.created_by === user?.id;
     const pendingMembers = club.pending_members || [];
     const isPendingMember = club.my_membership_status === 'pending';
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
             {/* Club Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="surface overflow-hidden mb-6 animate-fade-in">
                 <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-700 relative group">
                     {club.cover_image && (
                         <img src={club.cover_image} alt="" className="w-full h-full object-cover" />
@@ -326,8 +327,8 @@ export default function ClubDetailPage() {
                     </div>
                 </div>
                 <div className="p-6 pt-12">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                        <div>
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                        <div className="max-w-2xl">
                             <div className="flex items-center gap-2">
                                 <h1 className="text-2xl font-bold text-gray-900">{club.name}</h1>
                                 {club.is_public ? (
@@ -337,7 +338,7 @@ export default function ClubDetailPage() {
                                 )}
                             </div>
                             <p className="text-gray-500 mt-1">{club.description}</p>
-                            <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
                                 <span className="flex items-center gap-1">
                                     <Users className="w-4 h-4" /> {club.member_count} üye
                                 </span>
@@ -345,7 +346,7 @@ export default function ClubDetailPage() {
                                 <span>{formatDate(club.created_at)}</span>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 lg:justify-end">
                             {club.is_member ? (
                                 <>
                                     <button
@@ -354,12 +355,12 @@ export default function ClubDetailPage() {
                                     >
                                         <LogOut className="w-4 h-4" /> Ayrıl
                                     </button>
-                                    {isClubAdmin && club.deletion_request_status !== 'pending' && user?.role !== 'admin' && (
+                                    {isClubCreator && club.deletion_request_status !== 'pending' && (
                                         <button
                                             onClick={handleDeleteRequest}
                                             className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition"
                                         >
-                                            <Settings className="w-4 h-4" /> Silme Talebi Aç
+                                            <Settings className="w-4 h-4" /> Silme Onayına Gönder
                                         </button>
                                     )}
                                     {club.deletion_request_status === 'pending' && (
@@ -386,12 +387,12 @@ export default function ClubDetailPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-100 mb-6">
+            <div className="surface p-1 max-w-5xl mx-auto mb-6">
                 {(['feed', 'events', 'polls', 'members'] as const).map((t) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
-                        className={`flex-1 py-2 text-sm font-medium rounded-md transition ${tab === t ? 'bg-primary-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        className={`w-full sm:flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === t ? 'bg-primary-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                             }`}
                     >
                         {t === 'feed' ? 'Haber Akışı' : t === 'events' ? 'Etkinlikler' : t === 'polls' ? 'Anketler' : `Üyeler${pendingMembers.length > 0 && isClubAdmin ? ` (${pendingMembers.length})` : ''}`}

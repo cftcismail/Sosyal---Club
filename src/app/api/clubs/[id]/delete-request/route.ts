@@ -22,8 +22,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
             return NextResponse.json({ success: false, error: 'Kulüp bulunamadı.' }, { status: 404 });
         }
 
-        const canRequest = club.created_by === user.id || club.membership_role === 'admin';
-        if (!canRequest) {
+        const isCreator = club.created_by === user.id;
+        if (!isCreator) {
             return NextResponse.json({ success: false, error: 'Silme talebi oluşturmak için yetkiniz yok.' }, { status: 403 });
         }
 

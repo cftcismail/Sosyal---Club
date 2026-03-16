@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
     Home,
     Users,
@@ -29,6 +30,7 @@ type NotificationItem = {
 
 export default function Navbar() {
     const { data: session } = useSession();
+    const pathname = usePathname();
     const [menuOpen, setMenuOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [notifLoading, setNotifLoading] = useState(false);
@@ -86,16 +88,16 @@ export default function Navbar() {
     if (!session) return null;
 
     return (
-        <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200/80 sticky top-0 z-50 shadow-soft">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
+        <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
+            <div className="max-w-[1280px] mx-auto px-3 sm:px-4 lg:px-6">
+                <div className="flex justify-between h-14 bg-white px-1">
                     {/* Logo */}
                     <div className="flex items-center">
                         <Link href="/dashboard" className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 bg-primary-600 rounded-md flex items-center justify-center shadow-sm">
                                 <Users className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-bold text-gray-900 hidden sm:block">
+                            <span className="text-xl font-bold text-gray-900 hidden sm:block tracking-tight">
                                 Sosyal Kulüp
                             </span>
                         </Link>
@@ -107,7 +109,10 @@ export default function Navbar() {
                             <Link
                                 key={href}
                                 href={href}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition"
+                                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition ${pathname === href
+                                    ? 'text-primary-700 bg-primary-50'
+                                    : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                                    }`}
                             >
                                 <Icon className="w-4 h-4" />
                                 {label}
@@ -116,7 +121,10 @@ export default function Navbar() {
                         {user?.role === 'admin' && (
                             <Link
                                 href="/admin"
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition"
+                                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition ${pathname?.startsWith('/admin')
+                                    ? 'text-orange-700 bg-orange-50'
+                                    : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                                    }`}
                             >
                                 <Shield className="w-4 h-4" />
                                 Admin
@@ -128,7 +136,7 @@ export default function Navbar() {
                     <div className="flex items-center gap-3">
                         <Link
                             href="/clubs/new"
-                            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                            className="hidden sm:flex items-center gap-1 px-3 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition"
                         >
                             <Plus className="w-4 h-4" />
                             Kulüp Kur
@@ -138,7 +146,7 @@ export default function Navbar() {
                             <button
                                 type="button"
                                 onClick={toggleNotifications}
-                                className="relative p-2 text-gray-500 hover:text-primary-600 transition"
+                                className="relative p-2 rounded-md text-gray-500 hover:text-primary-600 hover:bg-gray-50 transition"
                                 aria-label="Bildirimler"
                             >
                                 <Bell className="w-5 h-5" />
@@ -148,7 +156,7 @@ export default function Navbar() {
                             </button>
 
                             {notifOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-gray-100 bg-white shadow-soft overflow-hidden animate-slide-up">
+                                <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-gray-200 bg-white shadow-soft overflow-hidden animate-slide-up">
                                     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                                         <p className="text-sm font-semibold text-gray-900">Önemli Bildirimler</p>
                                         <button
@@ -207,10 +215,10 @@ export default function Navbar() {
                             )}
                         </div>
 
-                        <Link href="/profile" className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition">
-                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white">
-                                {user?.avatar_url ? (
-                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <Link href="/profile" className="flex items-center gap-2 p-1.5 rounded-md hover:bg-gray-100 transition">
+                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
+                                {(user?.avatar_url || user?.image) ? (
+                                    <img src={user.avatar_url || user.image} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                     <User className="w-4 h-4 text-primary-600" />
                                 )}
@@ -222,7 +230,7 @@ export default function Navbar() {
 
                         <button
                             onClick={() => signOut({ callbackUrl: '/login' })}
-                            className="p-2 text-gray-400 hover:text-red-500 transition"
+                            className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
                             title="Çıkış Yap"
                         >
                             <LogOut className="w-5 h-5" />

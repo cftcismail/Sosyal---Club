@@ -44,11 +44,27 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role;
                 token.department = (user as any).department;
+                token.image = (user as any).image || null;
+                (token as any).avatar_url = (user as any).image || null;
+            }
+
+            if (trigger === 'update' && session) {
+                if ((session as any).department !== undefined) {
+                    token.department = (session as any).department;
+                }
+                if ((session as any).avatar_url !== undefined) {
+                    (token as any).avatar_url = (session as any).avatar_url;
+                    token.image = (session as any).avatar_url;
+                }
+                if ((session as any).image !== undefined) {
+                    token.image = (session as any).image;
+                    (token as any).avatar_url = (session as any).image;
+                }
             }
             return token;
         },
@@ -57,6 +73,8 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).id = token.id;
                 (session.user as any).role = token.role;
                 (session.user as any).department = token.department;
+                (session.user as any).avatar_url = (token as any).avatar_url || token.image || null;
+                session.user.image = ((token as any).avatar_url || token.image || null) as string | null;
             }
             return session;
         },

@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { query, getMany } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+async function ensureCommentImageColumns() {
+    await query(`ALTER TABLE comments ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)`);
+    await query(`ALTER TABLE comments ADD COLUMN IF NOT EXISTS image_name VARCHAR(300)`);
+    await query(`ALTER TABLE comments ADD COLUMN IF NOT EXISTS image_type VARCHAR(100)`);
+}
+
 // GET /api/posts/[id]/comments
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -32,16 +38,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
             return NextResponse.json({ success: false, error: 'Giriş yapmalısınız.' }, { status: 401 });
         }
 
-        const { content } = await request.json();
-        if (!content) {
-            return NextResponse.json({ success: false, error: 'Yorum içeriği zorunludur.' }, { status: 400 });
+        const { content, image } = await request.json();
+        const trimmedContent = typeof content === 'string' ? content.trim() : '';
+        const imageUrl = image?.url || null;
+        const imageName = image?.name || null;
+        const imageType = image?.type || null;
+
+        if (!trimmedContent && !imageUrl) {
+            return NextResponse.json({ success: false, error: 'Yorum metni veya görsel zorunludur.' }, { status: 400 });
         }
 
+        await ensureCommentImageColumns();
+
         const result = await query(
-            `INSERT INTO comments (post_id, user_id, content)
-       VALUES ($1, $2, $3)
+            `INSERT INTO comments (post_id, user_id, content, image_url, image_name, image_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-            [params.id, user.id, content]
+            [params.id, user.id, trimmedContent, imageUrl, imageName, imageType]
         );
 
         // Return full comment with author info for real-time display

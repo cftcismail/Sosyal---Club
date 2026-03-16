@@ -28,7 +28,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       DATABASE_URL: postgresql://clubadmin:${POSTGRES_PASSWORD:-ClubSecure2026!}@postgres:5432/sosyal_club
       NEXTAUTH_URL: http://localhost:3000

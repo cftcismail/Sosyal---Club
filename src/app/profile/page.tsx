@@ -22,7 +22,7 @@ const avatarColors = [
 ];
 
 export default function ProfilePage() {
-    const { data: session, status } = useSession();
+    const { data: session, status, update } = useSession();
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [editing, setEditing] = useState(false);
@@ -107,6 +107,12 @@ export default function ProfilePage() {
         if (data.success) {
             setProfile(data.data);
             setEditing(false);
+            await update({
+                name: data.data.name,
+                department: data.data.department,
+                avatar_url: data.data.avatar_url || null,
+                image: data.data.avatar_url || null,
+            });
         } else {
             alert(data.error || 'Profil kaydedilemedi.');
         }
@@ -124,12 +130,16 @@ export default function ProfilePage() {
         if (data.success) {
             setForm({ ...form, avatar_url: data.data.url, avatar_preset: null, avatar_background: null });
             // Auto-save avatar
-            await fetch('/api/profile', {
+            const saveRes = await fetch('/api/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ avatar_url: data.data.url }),
             });
-            setProfile((prev: any) => ({ ...prev, avatar_url: data.data.url, avatar_preset: null, avatar_background: null }));
+            const saveData = await saveRes.json();
+            if (saveData.success) {
+                setProfile((prev: any) => ({ ...prev, avatar_url: data.data.url, avatar_preset: null, avatar_background: null }));
+                await update({ avatar_url: data.data.url, image: data.data.url });
+            }
         } else {
             alert(data.error || 'Avatar yüklenemedi.');
         }
@@ -167,21 +177,24 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Profilim</h1>
+            <div className="surface p-5 sm:p-6 mb-6 flex items-center justify-between animate-fade-in">
+                <div>
+                    <p className="kicker mb-1">Hesap</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Profilim</h1>
+                </div>
                 {!editing && (
                     <button
                         onClick={() => setEditing(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                        className="flex items-center gap-1 px-3 py-2 text-sm bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm"
                     >
                         <Pencil className="w-4 h-4" /> Düzenle
                     </button>
                 )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="card animate-slide-up">
                 {/* Avatar & Name */}
-                <div className="h-32 bg-gradient-to-r from-primary-500 to-primary-700 relative">
+                <div className="h-32 bg-gradient-to-r from-primary-500 via-primary-600 to-primary-800 relative">
                     <div className="absolute -bottom-10 left-6">
                         <div className="w-20 h-20 bg-white rounded-full border-4 border-white flex items-center justify-center relative group">
                             {getAvatarSrc(editing ? form : profile) ? (
@@ -216,7 +229,7 @@ export default function ProfilePage() {
                                 <input
                                     value={form.name || ''}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input"
                                 />
                             </div>
                             <div>
@@ -224,7 +237,7 @@ export default function ProfilePage() {
                                 <select
                                     value={form.department || ''}
                                     onChange={(e) => setForm({ ...form, department: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input"
                                 >
                                     <option value="">Seçiniz</option>
                                     {availableDepts.map((d) => (
@@ -237,7 +250,7 @@ export default function ProfilePage() {
                                 <select
                                     value={form.title || ''}
                                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input"
                                 >
                                     <option value="">Seçiniz</option>
                                     {availableTitles.map((t) => (
@@ -250,7 +263,7 @@ export default function ProfilePage() {
                                 <input
                                     value={form.phone || ''}
                                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    className="input"
                                 />
                             </div>
                             <div>
@@ -259,7 +272,7 @@ export default function ProfilePage() {
                                     value={form.bio || ''}
                                     onChange={(e) => setForm({ ...form, bio: e.target.value })}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
+                                    className="input resize-none"
                                 />
                             </div>
                             <div>
@@ -299,6 +312,7 @@ export default function ProfilePage() {
                                         }}
                                         placeholder="Yeni ilgi alanı ekle..."
                                         className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                        className="input text-sm"
                                     />
                                     <button
                                         type="button"
@@ -308,14 +322,14 @@ export default function ProfilePage() {
                                                 setNewInterest('');
                                             }
                                         }}
-                                        className="px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition"
+                                        className="px-3 py-2 bg-primary-100 text-primary-700 rounded-xl hover:bg-primary-200 transition"
                                     >
                                         <Plus className="w-4 h-4" />
                                     </button>
                                 </div>
                                 <p className="text-xs text-gray-500 mt-1">Enter tuşu ile veya + butonuyla ilgi alanı ekleyin</p>
                             </div>
-                            <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="space-y-3 rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
                                 <div>
                                     <p className="text-sm font-medium text-gray-700 mb-2">Hazır Avatar Seç</p>
                                     <div className="grid grid-cols-2 gap-3">
@@ -367,13 +381,13 @@ export default function ProfilePage() {
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="flex items-center gap-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
+                                    className="flex items-center gap-1 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition disabled:opacity-50 shadow-sm"
                                 >
                                     <Save className="w-4 h-4" /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
                                 </button>
                                 <button
                                     onClick={() => { setEditing(false); setForm(profile); }}
-                                    className="flex items-center gap-1 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                                    className="flex items-center gap-1 px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition"
                                 >
                                     <X className="w-4 h-4" /> İptal
                                 </button>
